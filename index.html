@@ -504,6 +504,12 @@ body{
         <li>点「收藏夹」直接用收藏的词配对；右键（手机长按）选「背单词」看收藏列表。</li>
         <li>收藏列表里只能点 ★ 移出，避免误删。</li>
       </ul>
+      <h3>错词书</h3>
+      <ul>
+        <li>「错词书」在收藏夹后面，自动收集所有现在还是红色或黄色的词对：配错过、还没配成绿色的都在里面。</li>
+        <li>错词配对成功两次变成绿色后会自动移出；绿色的词再配错会重新收进来。</li>
+        <li>至少 5 对才能配对；右键（手机长按）选「背单词」可以先看列表，列表里也能点 ☆ 收藏。</li>
+      </ul>
       <h3>一局结束</h3>
       <ul>
         <li>结算页显示配对数和配错数。</li>
@@ -698,6 +704,25 @@ function getFavoritePairs() {
     return true;
   });
 }
+/* 错词书：所有「现在还是红色或黄色」的词对（配错过、还没配成绿色）。配成绿色就自动移出 */
+const MISTAKE_NAME = '错词书';
+function getMistakePairs() {
+  const map = loadPairState(), seen = new Set();
+  return GRE_SYNONYMS.filter(item => {
+    const k = pairKey(item.a, item.b), st = map[k];
+    if ((st !== 'wrong' && st !== 'half') || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+/* 「自选词池」玩法：收藏夹、错词书。S.favoriteMode 在这两种里都为 true，S.level 是 'favorites' / 'mistakes' */
+const CUSTOM = {
+  favorites: { name: FAVORITE_NAME, pairs: getFavoritePairs, min: FAV_MIN, few: FAV_TOO_FEW, track: 'fav',
+    empty: '收藏夹还是空的。在词组的「背单词」页里点 ☆ 或右键一个词对，就能加进来。' },
+  mistakes:  { name: MISTAKE_NAME, pairs: getMistakePairs, min: FAV_MIN, few: `目前错词书里的词不到 ${FAV_MIN} 对，先去别的词组玩几局吧！`, track: 'mistakes',
+    empty: '还没有错词。配错的词会自动收进来，配对成功两次变成绿色后就会移出。' }
+};
+const isCustom = level => typeof level === 'string' && Object.prototype.hasOwnProperty.call(CUSTOM, level);
 /* 红绿按「词对」记：只有真正在配对里出现过的那一对才会变色 */
 function loadPairState() {
   if (!PAIR_MAP) {
@@ -938,7 +963,6 @@ function renderLevels() {
   renderRank();
   if (roundsPlayed > 0) tip('first-back');
   const box = $('levels'); box.innerHTML = '';
-  const favPairs = getFavoritePairs();
   const groupButtons = GROUP_ORDER.map(realIndex => {
     const lv = LEVELS[realIndex];
     const b = document.createElement('button');
@@ -956,22 +980,25 @@ function renderLevels() {
   });
   groupButtons.forEach(btn => box.appendChild(btn));
 
-  const favBtn = document.createElement('button');
-  favBtn.type = 'button'; favBtn.className = 'lv'; favBtn.id = 'lv-favorites';
-  favBtn.innerHTML = `<span><span class="t">${FAVORITE_NAME}</span><span class="s">${favPairs.length} 对</span></span>${statusBar(favPairs.map(x => ({ w: x.a, p: x.b })))}`;
-  favBtn.addEventListener('click', () => {
-    if (lvSuppress) { lvSuppress = false; return; }
-    hideMenu();
-    startFavorites();
+  Object.keys(CUSTOM).forEach(key => {
+    const c = CUSTOM[key], pairs = c.pairs();
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'lv'; btn.id = `lv-${key}`;
+    btn.innerHTML = `<span><span class="t">${c.name}</span><span class="s">${pairs.length} 对</span></span>${statusBar(pairs.map(x => ({ w: x.a, p: x.b })))}`;
+    btn.addEventListener('click', () => {
+      if (lvSuppress) { lvSuppress = false; return; }
+      hideMenu();
+      if (key === 'mistakes' && !pairs.length) openCustomStudy(key); else startCustom(key);
+    });
+    btn.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(key, e.clientX, e.clientY); });
+    btn.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      clearTimeout(lvTimer);
+      lvTimer = setTimeout(() => { lvSuppress = true; showMenu(key, e.clientX, e.clientY); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, () => clearTimeout(lvTimer)));
+    box.appendChild(btn);
   });
-  favBtn.addEventListener('contextmenu', e => { e.preventDefault(); showMenu('favorites', e.clientX, e.clientY); });
-  favBtn.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse') return;
-    clearTimeout(lvTimer);
-    lvTimer = setTimeout(() => { lvSuppress = true; showMenu('favorites', e.clientX, e.clientY); }, 450);
-  });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => favBtn.addEventListener(ev, () => clearTimeout(lvTimer)));
-  box.appendChild(favBtn);
 }
 
 let lvTimer = null, lvSuppress = false, menuLevel = 0;
@@ -984,7 +1011,7 @@ function showMenu(n, x, y) {
   $('lvStudy').focus({ preventScroll: true });
 }
 function hideMenu() { $('lvmenu').hidden = true; }
-let studyMode = null;   // 当前背单词页：词组序号，或 'favorites'
+let studyMode = null;   // 当前背单词页：词组序号，或 'favorites' / 'mistakes'
 function rowHTML(P, state) {
   const fav = isFavoritePair(P.w, P.p);
   return `<div class="row ${state}${fav ? ' fav' : ''}" data-w="${P.w}" data-p="${P.p}">
@@ -1024,7 +1051,7 @@ function flashStudy(msg) {
 }
 function refreshStudy() {
   const top = $('wordlist').scrollTop;
-  if (studyMode === 'favorites') openFavoriteStudy(); else openStudy(studyMode);
+  if (isCustom(studyMode)) openCustomStudy(studyMode); else openStudy(studyMode);
   $('wordlist').scrollTop = top;
 }
 function openStudy(n) {
@@ -1043,23 +1070,25 @@ function openStudy(n) {
   $('studyGo').onclick = () => start(n);
   $('start').hidden = true; $('study').hidden = false;
 }
-function openFavoriteStudy() {
+function openCustomStudy(key) {
   hideMenu();
-  studyMode = 'favorites';
-  const rows = getFavoritePairs().map((item, id) => ({ id, w: item.a, p: item.b, zh: item.zh })).sort(pairSort);
-  $('studyEyebrow').textContent = `${rows.length} 对 · 点 ★ 移出收藏夹` + (rows.length < FAV_MIN ? ` · 至少 ${FAV_MIN} 对才能配对` : '');
-  $('studyTitle').textContent = FAVORITE_NAME;
+  studyMode = key;
+  const c = CUSTOM[key];
+  const rows = c.pairs().map((item, id) => ({ id, w: item.a, p: item.b, zh: item.zh })).sort(pairSort);
+  $('studyEyebrow').textContent = (key === 'favorites' ? `${rows.length} 对 · 点 ★ 移出收藏夹` : `${rows.length} 对 · 配错的词自动收进来，配成绿色后移出`) +
+    (rows.length < c.min ? ` · 至少 ${c.min} 对才能配对` : '');
+  $('studyTitle').textContent = c.name;
   $('wordlist').innerHTML = rows.length
     ? rows.map(P => rowHTML(P, getPairStatus(P))).join('')
-    : '<div class="note">收藏夹还是空的。在词组的「背单词」页里点 ☆ 或右键一个词对，就能加进来。</div>';
+    : `<div class="note">${c.empty}</div>`;
   bindRows();
   $('wordlist').scrollTop = 0;
   $('studyGo').textContent = '开始配对';
   $('studyGo').disabled = false;
-  $('studyGo').onclick = () => startFavorites();
+  $('studyGo').onclick = () => startCustom(key);
   $('start').hidden = true; $('study').hidden = false;
 }
-$('lvStudy').addEventListener('click', () => { track('study-open'); if (menuLevel === 'favorites') openFavoriteStudy(); else openStudy(menuLevel); });
+$('lvStudy').addEventListener('click', () => { track('study-open'); if (isCustom(menuLevel)) openCustomStudy(menuLevel); else openStudy(menuLevel); });
 $('studyBack').addEventListener('click', () => { $('study').hidden = true; renderLevels(); $('start').hidden = false; });
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#lvmenu')) hideMenu(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenu(); });
@@ -1209,7 +1238,7 @@ const progress = () => S.allMode ? S.matchedIds.size : S.matches;
 function launchRound(caption) {
   buildStops(S.target, S.unlimited);
   document.querySelectorAll('.stop').forEach(el => el.classList.toggle('hit', S.stopsHit.has(Number(el.dataset.n))));
-  $('lvname').textContent = S.favoriteMode ? FAVORITE_NAME : META[S.level].name;
+  $('lvname').textContent = S.favoriteMode ? CUSTOM[S.level].name : META[S.level].name;
   $('caption').textContent = caption;
   $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
   $('exitRoundBtn').hidden = false;
@@ -1228,7 +1257,7 @@ function loadRoundSave(level) {
   try {
     const v = JSON.parse(localStorage.getItem(resumeKey(level)) || 'null');
     if (!v || !Array.isArray(v.L) || !Array.isArray(v.R)) return null;
-    const pool = level === 'favorites' ? v.pool : LEVELS[level];
+    const pool = isCustom(level) ? v.pool : LEVELS[level];
     if (!Array.isArray(pool) || pool.length !== v.poolLen) return null;
     const okId = id => id === null || (Number.isInteger(id) && id >= 0 && id < pool.length);
     if (v.L.length !== SLOTS || v.R.length !== SLOTS || !v.L.every(okId) || !v.R.every(okId)) return null;
@@ -1256,7 +1285,7 @@ function saveRound() {
 }
 function resumeRound(level, v) {
   if (S && S.timer) clearInterval(S.timer);
-  const favoriteMode = level === 'favorites';
+  const favoriteMode = isCustom(level);
   const pool = favoriteMode ? v.pool.map((P, id) => ({ id, w: P.w, p: P.p, zh: P.zh })) : LEVELS[level];
   const okId = id => Number.isInteger(id) && id >= 0 && id < pool.length;
   S = {
@@ -1281,7 +1310,7 @@ function resumeRound(level, v) {
   track('round-resume');
 }
 function describeSave(level, v) {
-  const name = level === 'favorites' ? FAVORITE_NAME : META[level].name;
+  const name = isCustom(level) ? CUSTOM[level].name : META[level].name;
   const done = v.allMode ? (v.matchedIds || []).length : v.matches;
   const time = v.unlimited ? `已用 ${Math.floor((v.elapsed || 0) / 1000)} 秒` : `剩 ${Math.ceil(v.timeLeft / 1000)} 秒`;
   return `${name} · 已配 ${done}/${v.target} 对 · ${time}`;
@@ -1308,15 +1337,15 @@ window.addEventListener('pagehide', saveRound);   // 直接关页面 / 刷新也
 
 /* 所有「开始」入口都走这里：有没玩完的就先问 */
 function start(level) { askResume(level, () => startNew(level)); }
-function startFavorites() { askResume('favorites', startFavoritesNew); }
-function startFavoritesNew() {
-  const pairList = getFavoritePairs();
-  if (pairList.length < FAV_MIN) { notice(FAV_TOO_FEW); return; }
+function startCustom(key) { askResume(key, () => startCustomNew(key)); }
+function startCustomNew(key) {
+  const c = CUSTOM[key], pairList = c.pairs();
+  if (pairList.length < c.min) { notice(c.few); return; }
   const pool = pairList.map((pair, id) => ({ id, w: pair.a, p: pair.b, zh: pair.zh }));
   const bag = shuffle(pool.map(P => P.id));
   const queue = [];
   S = {
-    level: 'favorites', pool, bag, queue,
+    level: key, pool, bag, queue,
     L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
     sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
     matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
@@ -1328,10 +1357,10 @@ function startFavoritesNew() {
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
   trackEmptySlots();
-  clearRoundSave('favorites');
+  clearRoundSave(key);
   launchRound('先点一个词，再点另一列里和它等价的词');
   scheduleRoundTip();
-  track(S.favoriteMode ? 'round-start-fav' : `round-start-g${S.level + 1}`);
+  track(`round-start-${c.track}`);
 }
 
 function exitRound() {
@@ -1516,7 +1545,7 @@ function finish(won) {
   const prev = store.get(missKey(S.level), []);
   store.set(missKey(S.level), [...new Set(missedIds.concat(prev))].slice(0, 40));
   if (!S.favoriteMode && !S.allMode) store.set(bagKey(S.level), S.bag);
-  $('endEyebrow').textContent = S.favoriteMode ? `${FAVORITE_NAME} · ${won ? '走完全程' : '时间到'}` : `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
+  $('endEyebrow').textContent = S.favoriteMode ? `${CUSTOM[S.level].name} · ${won ? '走完全程' : '时间到'}` : `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
   $('endTitle').textContent = won ? '通关' : `配了 ${progress()} 对`;
   $('stats').innerHTML =
     `<div><span>配对</span><b>${progress()}/${S.target}</b></div>` +
@@ -1547,7 +1576,7 @@ function finish(won) {
 }
 
 $('againBtn').addEventListener('click', () => {
-  if (S && S.favoriteMode) startFavorites();
+  if (S && S.favoriteMode) startCustom(S.level);
   else if (S) start(S.level);
 });
 $('menuBtn').addEventListener('click', () => { $('end').hidden = true; $('exitRoundBtn').hidden = true; renderLevels(); $('start').hidden = false; });
