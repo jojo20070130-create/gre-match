@@ -226,6 +226,11 @@ body{
 .tips-reset button{appearance:none;border:0;background:transparent;padding:4px 2px;font:inherit;font-size:.78rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .tips-reset button:hover,.tips-reset button:focus-visible{color:var(--sel)}
 .tips-reset span{font-size:.78rem;color:var(--sel)}
+.resume{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:color-mix(in srgb, var(--ink) 28%, transparent);border-radius:24px}
+.resume-card{background:var(--tile);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:22px 20px;max-width:340px;width:100%;text-align:center;box-shadow:0 18px 40px var(--shadow)}
+.resume-card h3{margin:0 0 6px;font-size:1.15rem}
+.resume-card p{margin:0 0 16px;font-size:.85rem;color:var(--muted)}
+.resume-card .row2{justify-content:center}
 .privacy-note{margin:0;font-size:.72rem;color:var(--muted);text-align:center}
 .foot{margin-top:auto;text-align:center;font-size:.78rem;color:var(--muted);letter-spacing:.04em}
 
@@ -351,6 +356,16 @@ body{
   <div class="tipbar" id="tipbar" role="status" aria-live="polite" hidden></div>
   <div class="foot"><span class="lvname" id="lvname"></span> · 右键（手机长按）看英文释义</div>
   <div class="pop" id="pop" role="tooltip" hidden></div>
+  <div class="resume" id="resume" hidden>
+    <div class="resume-card" role="dialog" aria-modal="true" aria-labelledby="resumeTitle" aria-describedby="resumeInfo">
+      <h3 id="resumeTitle">上次配对游戏尚未结束</h3>
+      <p id="resumeInfo"></p>
+      <div class="row2">
+        <button class="go" id="resumeGo" type="button">继续上次</button>
+        <button class="go ghost" id="resumeNew" type="button">重新开始</button>
+      </div>
+    </div>
+  </div>
 
   <section class="sheet" id="start">
     <div class="eyebrow">GRE 六选二 · 等价词</div>
@@ -439,7 +454,7 @@ body{
         <li>结算页显示配对数和配错数。</li>
         <li>列出这局配错的词（红）和配对成功的词（绿），每行都可以点 ☆ 收藏。</li>
         <li>「再来一局」用同一组再玩；「换词组」回到介绍页。</li>
-        <li>配对中途可以点右上角「退出」直接回到介绍页。</li>
+        <li>配对中途可以点右上角「退出」回到介绍页。退出或直接关掉页面时进度会保存（至少配过或配错过一次），下次进同一组会问你「继续上次」还是「重新开始」。</li>
       </ul>
       <h3>其他</h3>
       <ul>
@@ -1004,7 +1019,111 @@ function setupRound() {
   if (S.allMode) { S.bag = shuffle(S.pool.map(P => P.id)); S.queue = []; }   // 全部单词：每对各来一遍，不动词组的轮换进度
 }
 const progress = () => S.allMode ? S.matchedIds.size : S.matches;
-function startFavorites() {
+
+/* 新开一局和继续上次共用：摆好进度条、切到棋盘、开始计时 */
+function launchRound(caption) {
+  buildStops(S.target, S.unlimited);
+  document.querySelectorAll('.stop').forEach(el => el.classList.toggle('hit', S.stopsHit.has(Number(el.dataset.n))));
+  $('lvname').textContent = S.favoriteMode ? FAVORITE_NAME : META[S.level].name;
+  $('caption').textContent = caption;
+  $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
+  $('exitRoundBtn').hidden = false;
+  S.running = true; S.last = Date.now();
+  S.timer = setInterval(tick, 100);
+  render();
+  tilesL[0].focus({ preventScroll: true });
+  clearTipQueue(); $('tipsResetMsg').textContent = '';
+}
+
+/* ---------- 中途退出 → 下次进同一组可以继续 ---------- */
+const resumeKey = level => `gre-eq-resume-v1-${level}`;
+function clearRoundSave(level) { try { localStorage.removeItem(resumeKey(level)); } catch {} }
+function loadRoundSave(level) {
+  try {
+    const v = JSON.parse(localStorage.getItem(resumeKey(level)) || 'null');
+    if (!v || !Array.isArray(v.L) || !Array.isArray(v.R)) return null;
+    const pool = level === 'favorites' ? v.pool : LEVELS[level];
+    if (!Array.isArray(pool) || pool.length !== v.poolLen) return null;
+    const okId = id => id === null || (Number.isInteger(id) && id >= 0 && id < pool.length);
+    if (v.L.length !== SLOTS || v.R.length !== SLOTS || !v.L.every(okId) || !v.R.every(okId)) return null;
+    return v;
+  } catch { return null; }
+}
+function saveRound() {
+  if (!S || !S.running || (S.matches === 0 && S.errors === 0)) return;   // 一对都没动过就不存
+  const L = S.L.slice(), R = S.R.slice();
+  // 刚配对成功、还没来得及消掉的格子当作空位
+  for (let i = 0; i < SLOTS; i++) {
+    if (S.lock.has('L' + i) && tilesL[i].classList.contains('ok')) L[i] = null;
+    if (S.lock.has('R' + i) && tilesR[i].classList.contains('ok')) R[i] = null;
+  }
+  const data = {
+    poolLen: S.pool.length,
+    pool: S.favoriteMode ? S.pool.map(P => ({ w: P.w, p: P.p, zh: P.zh })) : undefined,
+    L, R, bag: S.bag, queue: S.queue,
+    matches: S.matches, combo: S.combo, errors: S.errors,
+    timeLeft: S.timeLeft, elapsed: S.elapsed,
+    target: S.target, unlimited: S.unlimited, allMode: S.allMode,
+    missed: [...S.missed], stopsHit: [...S.stopsHit], matchedIds: [...S.matchedIds]
+  };
+  try { localStorage.setItem(resumeKey(S.level), JSON.stringify(data)); } catch {}
+}
+function resumeRound(level, v) {
+  if (S && S.timer) clearInterval(S.timer);
+  const favoriteMode = level === 'favorites';
+  const pool = favoriteMode ? v.pool.map((P, id) => ({ id, w: P.w, p: P.p, zh: P.zh })) : LEVELS[level];
+  const okId = id => Number.isInteger(id) && id >= 0 && id < pool.length;
+  S = {
+    level, pool, favoriteMode,
+    bag: (v.bag || []).filter(okId),
+    queue: (v.queue || []).filter(q => q && okId(q.id)),
+    L: v.L.slice(), R: v.R.slice(),
+    sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
+    matches: v.matches | 0, combo: v.combo | 0, errors: v.errors | 0,
+    timeLeft: Math.max(1000, Number(v.timeLeft) || START_MS), elapsed: Number(v.elapsed) || 0,
+    target: v.target, unlimited: !!v.unlimited, allMode: !!v.allMode,
+    last: 0, running: false, timer: null,
+    missed: new Map((v.missed || []).filter(e => okId(e[0]))),
+    stopsHit: new Set(v.stopsHit || []),
+    matchedIds: new Set((v.matchedIds || []).filter(okId)),
+    defTracked: false
+  };
+  trackEmptySlots();
+  if (S.emptyL.length >= 2 || S.L.every(x => x === null)) refill();
+  clearRoundSave(level);
+  launchRound('继续上次的进度');
+  track('round-resume');
+}
+function describeSave(level, v) {
+  const name = level === 'favorites' ? FAVORITE_NAME : META[level].name;
+  const done = v.allMode ? (v.matchedIds || []).length : v.matches;
+  const time = v.unlimited ? `已用 ${Math.floor((v.elapsed || 0) / 1000)} 秒` : `剩 ${Math.ceil(v.timeLeft / 1000)} 秒`;
+  return `${name} · 已配 ${done}/${v.target} 对 · ${time}`;
+}
+let resumeChoice = null;
+function askResume(level, startFresh) {
+  const v = loadRoundSave(level);
+  if (!v) { clearRoundSave(level); startFresh(); return; }
+  hideMenu();
+  $('resumeInfo').textContent = describeSave(level, v);
+  resumeChoice = {
+    go: () => resumeRound(level, v),
+    fresh: () => { clearRoundSave(level); startFresh(); }
+  };
+  $('resume').hidden = false;
+  $('resumeGo').focus({ preventScroll: true });
+}
+function closeResume() { $('resume').hidden = true; resumeChoice = null; }
+$('resumeGo').addEventListener('click', () => { const c = resumeChoice; closeResume(); if (c) c.go(); });
+$('resumeNew').addEventListener('click', () => { const c = resumeChoice; closeResume(); if (c) c.fresh(); });
+$('resume').addEventListener('click', e => { if (e.target === $('resume')) closeResume(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('resume').hidden) closeResume(); });
+window.addEventListener('pagehide', saveRound);   // 直接关页面 / 刷新也算中途离开
+
+/* 所有「开始」入口都走这里：有没玩完的就先问 */
+function start(level) { askResume(level, () => startNew(level)); }
+function startFavorites() { askResume('favorites', startFavoritesNew); }
+function startFavoritesNew() {
   const pairList = getFavoritePairs();
   if (pairList.length < FAV_MIN) { notice(FAV_TOO_FEW); return; }
   const pool = pairList.map((pair, id) => ({ id, w: pair.a, p: pair.b, zh: pair.zh }));
@@ -1023,23 +1142,14 @@ function startFavorites() {
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
   trackEmptySlots();
-  buildStops(S.target, S.unlimited);
-  document.querySelectorAll('.stop').forEach(s => s.classList.remove('hit'));
-  $('lvname').textContent = FAVORITE_NAME;
-  $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
-  $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
-  $('exitRoundBtn').hidden = false;
-  S.running = true; S.last = Date.now();
-  S.timer = setInterval(tick, 100);
-  render();
-  tilesL[0].focus({ preventScroll: true });
-  clearTipQueue(); $('tipsResetMsg').textContent = '';
+  clearRoundSave('favorites');
+  launchRound('先点一个词，再点另一列里和它等价的词');
   scheduleRoundTip();
   track(S.favoriteMode ? 'round-start-fav' : `round-start-g${S.level + 1}`);
 }
 
 function exitRound() {
-  if (S && S.running) track('round-exit');
+  if (S && S.running) { track('round-exit'); saveRound(); }
   if (S && S.timer) clearInterval(S.timer);
   S = null; hidePop(); clearTipQueue();
   $('exitRoundBtn').hidden = true;
@@ -1049,7 +1159,7 @@ function exitRound() {
 $('exitRoundBtn').addEventListener('click', exitRound);
 
 /* ---------- 一局 ---------- */
-function start(level) {
+function startNew(level) {
   if (S && S.timer) clearInterval(S.timer);
   const pool = LEVELS[level];
   let bag = store.get(bagKey(level), null);
@@ -1067,17 +1177,8 @@ function start(level) {
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
   trackEmptySlots();
-  buildStops(S.target, S.unlimited);
-  document.querySelectorAll('.stop').forEach(s => s.classList.remove('hit'));
-  $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
-  $('lvname').textContent = META[level].name;
-  $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
-  $('exitRoundBtn').hidden = false;
-  S.running = true; S.last = Date.now();
-  S.timer = setInterval(tick, 100);
-  render();
-  tilesL[0].focus({ preventScroll: true });
-  clearTipQueue(); $('tipsResetMsg').textContent = '';
+  clearRoundSave(level);
+  launchRound('先点一个词，再点另一列里和它等价的词');
   scheduleRoundTip();
   track(S.favoriteMode ? 'round-start-fav' : `round-start-g${S.level + 1}`);
 }
@@ -1205,6 +1306,7 @@ function wrong(l, r) {
 function finish(won) {
   if (!S || !S.running) return;
   track(won ? 'round-win' : 'round-timeout');
+  clearRoundSave(S.level);
   S.running = false; clearInterval(S.timer); hidePop();
   clearTipQueue(); roundsPlayed++;
   const missedIds = [...S.missed.keys()];
