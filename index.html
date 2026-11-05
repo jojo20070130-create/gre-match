@@ -27,6 +27,8 @@
   --ok-bg:rgba(44,122,102,0.12);
   --bad:#b75b6d;
   --bad-bg:rgba(183,91,109,0.12);
+  --half:#a8710a;
+  --half-bg:rgba(224,161,0,0.16);
   --sel:#1f5fd6;
   --shadow:rgba(20,48,90,0.12);
   --bg-glow1:rgba(168,213,255,0.32);
@@ -102,6 +104,7 @@
   --menu-hover:rgba(127,176,255,0.18);
   --row-line:rgba(155,180,214,0.18); --row-hover:rgba(127,176,255,0.5);
   --star-on:#ffc83d;
+  --half:#ffc83d; --half-bg:rgba(255,200,61,0.16);
   --toggle-bg:#1f4a8a; --toggle-knob:#0b1a30; --toggle-icon:#e3eefc;
 }}
 :root[data-theme="dark"]{
@@ -134,6 +137,7 @@
   --menu-hover:rgba(127,176,255,0.18);
   --row-line:rgba(155,180,214,0.18); --row-hover:rgba(127,176,255,0.5);
   --star-on:#ffc83d;
+  --half:#ffc83d; --half-bg:rgba(255,200,61,0.16);
   --toggle-bg:#1f4a8a; --toggle-knob:#0b1a30; --toggle-icon:#e3eefc;
 }
 
@@ -276,6 +280,7 @@ body{
 .lv .bar{width:72px;height:7px;border-radius:999px;background:var(--bar-bg);overflow:hidden;display:flex}
 .lv .bar i{display:block;height:100%;flex:none}
 .lv .bar i.w{background:var(--bad)}
+.lv .bar i.h{background:var(--half)}
 .lv .bar i.c{background:var(--ok)}
 .row2{display:flex;gap:10px;flex-wrap:wrap}
 .menu{position:absolute;z-index:6;background:var(--tile);border:1px solid var(--line);border-radius:12px;padding:4px;box-shadow:0 16px 30px var(--shadow-lg)}
@@ -286,8 +291,9 @@ body{
 .wordlist .row.unseen{background:transparent;color:var(--ink)}
 .wordlist .row.correct{background:var(--ok-bg);color:var(--ok)}
 .wordlist .row.wrong{background:var(--bad-bg);color:var(--bad)}
+.wordlist .row.half{background:var(--half-bg);color:var(--half)}
 .wordlist .row em{font-style:normal;color:var(--muted);text-align:right}
-.wordlist .row.correct em,.wordlist .row.wrong em{color:inherit;opacity:.9}
+.wordlist .row.correct em,.wordlist .row.wrong em,.wordlist .row.half em{color:inherit;opacity:.9}
 .wordlist .row b{font-weight:700}
 .wordlist .row{grid-template-columns:auto 1fr auto;align-items:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .wordlist .row:hover{box-shadow:inset 0 0 0 1.5px var(--row-hover)}
@@ -328,16 +334,41 @@ body{
 .theme-toggle:focus-visible{outline:3px solid var(--sel);outline-offset:3px}
 @media (prefers-reduced-motion: reduce){.theme-toggle,.theme-toggle .knob{transition:none}}
 /* rank badge + reset */
-.rank{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;width:100%;background:var(--lv-bg);border:1.5px solid var(--lv-border);border-radius:16px;padding:12px 14px;text-align:left}
+.rank{position:relative;cursor:pointer;font:inherit;color:var(--ink);display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;width:100%;background:var(--lv-bg);border:1.5px solid var(--lv-border);border-radius:16px;padding:12px 14px;text-align:left}
 .rank .ico{grid-row:span 2;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:var(--lv-n-bg);border:2px solid var(--star-on)}
 .rank .ico svg{display:block;animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-2px) rotate(-3deg)}}
 @media (prefers-reduced-motion: reduce){.rank .ico svg{animation:none}}
-.rank .nm{font-family:var(--f-display);font-weight:800;font-size:1.2rem;letter-spacing:-.02em;line-height:1.1}
+.rank .nm{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-display);font-weight:800;font-size:1.2rem;letter-spacing:-.02em;line-height:1.1}
 .rank .sub{font-family:var(--f-mono);font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .rank .meter{grid-column:1/-1;height:6px;border-radius:999px;background:var(--bar-bg);overflow:hidden}
 .rank .meter i{display:block;height:100%;background:var(--star-on);border-radius:999px}
 .rank.up{animation:popin .4s ease-out}
+.rank:hover{border-color:var(--lv-hover)}
+.rank:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.rank .arrow{color:var(--muted);font-size:1.4rem;line-height:1;padding-right:2px}
+.rank .ico{position:relative}
+.dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#e8546a;border:2px solid var(--lv-bg)}
+.badges-body{overflow:auto;min-height:0;flex:1;border-top:1px solid var(--line);padding-top:12px;color:var(--ink)}
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:8px 0 18px}
+.bd{display:grid;justify-items:center;gap:3px;text-align:center;background:var(--lv-bg);border:1.5px solid var(--lv-border);border-radius:16px;padding:10px 6px}
+.bd b{font-family:var(--f-display);font-size:.92rem;line-height:1.15}
+.bd span{font-family:var(--f-mono);font-size:.68rem;color:var(--muted)}
+.bd.cur{border-color:var(--star-on);box-shadow:0 0 0 3px var(--sel-ring)}
+.bd.locked svg,.ach.locked .aico{filter:grayscale(1);opacity:.4}
+.bd.locked b{color:var(--muted)}
+.ach-top{margin-top:4px}
+.ach-h{margin:14px 0 6px;color:var(--sel)}
+.ach{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 10px;margin-bottom:6px;border-radius:12px;background:var(--lv-bg);border:1.5px solid var(--lv-border)}
+.ach.done{border-color:var(--star-on)}
+.ach.locked .atx b{color:var(--muted)}
+.ach .aico{font-size:1.6rem;width:2em;text-align:center}
+.ach .atx{display:grid;gap:3px;min-width:0}
+.ach .atx small{color:var(--muted);font-size:.78rem;line-height:1.35}
+.ach .meter{display:block;height:5px;border-radius:999px;background:var(--bar-bg);overflow:hidden}
+.ach .meter i{display:block;height:100%;background:var(--star-on);border-radius:999px}
+.ach .acnt{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.ach.done .acnt{color:var(--ok);font-weight:700;font-size:1.05rem}
 .endrank{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:.85rem;color:var(--sel)}
 .go.danger{color:var(--bad);border-color:var(--bad-border)}
 .go.danger.armed{background:var(--bad);color:#fff;border-color:transparent}
@@ -389,11 +420,11 @@ body{
       <li><b>右键/长按</b><span>词组 → 背单词；配对时的单词 → 看英文释义。</span></li>
       <li><b>其他</b><span><button type="button" class="linkbtn" id="helpOpen">其他规则</button>第一次用到时会有提示。</span></li>
     </ol>
-    <div class="rank" id="rank"></div>
+    <button type="button" class="rank" id="rank" aria-label="查看徽章和成就"></button>
     <div class="eyebrow">点词组开始</div>
     <div class="levels" id="levels"></div>
-    <div class="row2"><button class="go ghost small danger" id="resetBtn" type="button">重置全部进度</button></div>
     <div class="tips-reset"><button type="button" id="tipsReset">重新显示新手提示</button><span id="tipsResetMsg" aria-live="polite"></span></div>
+    <div class="row2"><button class="go ghost small danger" id="resetBtn" type="button">重置全部进度</button></div>
     <p class="privacy-note">本站匿名统计访问和游玩次数，不收集任何个人信息。</p>
   </section>
 
@@ -409,6 +440,13 @@ body{
       <button class="go" id="settingsDone" type="button">完成</button>
       <button class="go ghost" id="settingsReset" type="button">恢复默认（75 秒 · 20 对）</button>
     </div>
+  </section>
+
+  <section class="sheet" id="badges" hidden aria-labelledby="badgesTitle">
+    <div class="eyebrow">徽章与成就</div>
+    <h2 id="badgesTitle">我的收集</h2>
+    <div class="badges-body" id="badgesBody"></div>
+    <div class="row2"><button class="go ghost" id="badgesBack" type="button">返回</button></div>
   </section>
 
   <section class="sheet" id="help" hidden aria-labelledby="helpTitle">
@@ -448,14 +486,15 @@ body{
       <h3>背单词</h3>
       <ul>
         <li>在介绍页右键（手机长按）词组，选「背单词」，看这组全部词对和中文意思。</li>
-        <li>词表按 红（配错过）→ 绿（配对过）→ 白（还没遇到）排序。</li>
+        <li>词表按 红（配错过）→ 黄（错后配对了一次）→ 绿（已掌握）→ 白（还没遇到）排序。</li>
         <li>词表底部「开始这组」直接开始配对，「返回」回到介绍页。</li>
       </ul>
-      <h3>红绿记录</h3>
+      <h3>红黄绿记录</h3>
       <ul>
         <li>按词对记录：只有在配对里真正出现过的那一对才会变色。</li>
-        <li>显示的是最近一次的结果：配错变红，之后配对成功变绿。</li>
-        <li>词组按钮上的进度条显示 红 / 绿 / 空 的比例，和词表里的颜色一致。</li>
+        <li>配错变红；红色的词再配对成功一次变黄，再配对成功一次才变绿。没配错过的词第一次配对成功直接变绿；绿色或黄色的词再配错会变回红色。</li>
+        <li>词组按钮上的进度条从左到右依次是 绿 / 黄 / 红 / 空 的比例，和词表里的颜色一致。</li>
+        <li>「学完」一个词组 = 这组所有词对都是绿色。</li>
       </ul>
       <h3>收藏夹</h3>
       <ul>
@@ -645,7 +684,7 @@ function toggleFavoritePair(a, b) {
   const added = !set.has(k);
   if (added) set.add(k); else set.delete(k);
   saveFavoriteKeys(set);
-  if (added) { tip('first-fav'); track('fav-add'); }
+  if (added) { tip('first-fav'); track('fav-add'); checkAchievements(); }
   return added;
 }
 function getFavoritePairs() {
@@ -668,7 +707,9 @@ function loadPairState() {
 }
 function markPair(P, outcome) {
   if (!P) return;
-  loadPairState()[pairKey(P.w, P.p)] = outcome === 'wrong' ? 'wrong' : 'correct';
+  /* 红 = 配错；配错后第一次配对 → 黄；再配对一次 → 绿；没配错过的词第一次配对直接绿 */
+  const map = loadPairState(), k = pairKey(P.w, P.p);
+  map[k] = outcome === 'wrong' ? 'wrong' : (map[k] === 'wrong' ? 'half' : 'correct');
   schedulePairSave();
 }
 /* 合并同一时刻的多次写入（配错一次会连标两对），落盘一次 */
@@ -684,11 +725,11 @@ addEventListener('pagehide', () => { if (pairSaveTimer !== null) flushPairSave()
 const STATS_KEY = 'gre-eq-stats-v1';
 const RANKS = [
   { name: '等价词菜鸟', min: 0 },
-  { name: '等价词新手', min: 30 },
-  { name: '等价词学徒', min: 100 },
-  { name: '等价词大师', min: 300 },
-  { name: '等价词长老', min: 700 },
-  { name: '等价词国王', min: 1500 }
+  { name: '等价词新手', min: 15 },
+  { name: '等价词学徒', min: 50 },
+  { name: '等价词大师', min: 150 },
+  { name: '等价词长老', min: 400 },
+  { name: '等价词国王', min: 800 }
 ];
 /* 六个迷你角色（内联 SVG，固定配色，深浅色主题下都清楚）：蛋壳小鸡 → 嫩芽 → 捧书学徒 → 学士帽 → 白胡子长老 → 小国王 */
 const OL = '#23406e';
@@ -711,46 +752,102 @@ const CHARS = [
 const badgeSVG = (i, px = 56) => `<svg viewBox="0 0 64 64" width="${px}" height="${px}" role="img" aria-label="${RANKS[i].name}">${CHARS[i]}</svg>`;
 function getStats() {
   if (!STATS) {
-    try { const s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); STATS = { correct: Math.max(0, Number(s && s.correct) || 0) }; } catch { STATS = { correct: 0 }; }
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}') || {}; } catch {}
+    const num = v => Math.max(0, Number(v) || 0);
+    STATS = { correct: num(s.correct), bestCombo: num(s.bestCombo), wins: num(s.wins), perfect: num(s.perfect), recovered: num(s.recovered),
+      ach: s.ach && typeof s.ach === 'object' ? s.ach : {}, fresh: !!s.fresh };
   }
   return STATS;
 }
+function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(getStats())); } catch {} }
 function rankIndex(n) { let r = 0; RANKS.forEach((x, i) => { if (n >= x.min) r = i; }); return r; }
-function addCorrect() {
+function addCorrect(combo = 0, wasHalf = false) {
   const s = getStats(), before = rankIndex(s.correct);
   s.correct++;
-  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch {}
+  if (combo > s.bestCombo) s.bestCombo = combo;
+  if (wasHalf) s.recovered++;   // 黄 → 绿：错过的词真的补回来了
+  saveStats();
   const after = rankIndex(s.correct);
   return after > before ? after : -1;   // 升级了就返回新段位序号
 }
 function renderRank(up) {
   const n = getStats().correct, i = rankIndex(n), cur = RANKS[i], nx = RANKS[i + 1];
   const el = $('rank');
-  el.innerHTML = `<span class="ico">${badgeSVG(i, 60)}</span><span class="nm">${cur.name}</span>` +
+  el.innerHTML = `<span class="ico">${badgeSVG(i, 60)}${getStats().fresh ? '<span class="dot" aria-label="有新成就"></span>' : ''}</span><span class="nm"><span>${cur.name}</span><span class="arrow" aria-hidden="true">›</span></span>` +
     `<span class="sub">${nx ? `累计配对 ${n} · 距「${nx.name}」还差 ${nx.min - n}` : `累计配对 ${n} · 已是最高段位`}</span>` +
     `<span class="meter"><i style="width:${nx ? ((n - cur.min) / (nx.min - cur.min) * 100).toFixed(1) : 100}%"></i></span>`;
   el.classList.remove('up'); if (up) { void el.offsetWidth; el.classList.add('up'); }
+}
+
+/* ---------- 成就：连对、学完词组、通关……全部从已有数据算出来，解锁后记在 stats.ach ---------- */
+const groupsDone = () => LEVELS.reduce((n, lv) => n + (lv.length && lv.every(P => getPairStatus(P) === 'correct') ? 1 : 0), 0);
+const ACHIEVEMENTS = [
+  { id: 'st5',  g: '连击', ico: '🔥', name: '连击新秀', desc: '一局里连续配对正确 5 次',  goal: 5,  cur: c => c.bestCombo },
+  { id: 'st10', g: '连击', ico: '⚡', name: '十连击',   desc: '一局里连续配对正确 10 次', goal: 10, cur: c => c.bestCombo },
+  { id: 'st20', g: '连击', ico: '🚀', name: '二十连击', desc: '一局里连续配对正确 20 次', goal: 20, cur: c => c.bestCombo },
+  { id: 'st35', g: '连击', ico: '🌟', name: '势不可挡', desc: '一局里连续配对正确 35 次', goal: 35, cur: c => c.bestCombo },
+  { id: 'st50', g: '连击', ico: '👑', name: '连击之王', desc: '一局里连续配对正确 50 次（可在设置里把目标调到 50 对或「全部单词」）', goal: 50, cur: c => c.bestCombo },
+  { id: 'gr1',  g: '学完词组', ico: '📗', name: '学完一组',   desc: '一个词组里所有词对都变成绿色', goal: 1,  cur: c => c.groups },
+  { id: 'gr3',  g: '学完词组', ico: '📚', name: '三组在手',   desc: '学完 3 个词组',               goal: 3,  cur: c => c.groups },
+  { id: 'gr5',  g: '学完词组', ico: '🎒', name: '半壁江山',   desc: '学完 5 个词组',               goal: 5,  cur: c => c.groups },
+  { id: 'gr10', g: '学完词组', ico: '🏆', name: '词库通关',   desc: '学完全部 10 个词组',          goal: 10, cur: c => c.groups },
+  { id: 'win1',  g: '其他', ico: '🏁', name: '首次通关', desc: '完整通关一局',                     goal: 1,  cur: c => c.wins },
+  { id: 'perf1', g: '其他', ico: '💎', name: '完美通关', desc: '通关一局且一个都没配错',           goal: 1,  cur: c => c.perfect },
+  { id: 'rec1',  g: '其他', ico: '🩹', name: '知错能改', desc: '把一对配错过的词，从红配成黄再配成绿', goal: 1,  cur: c => c.recovered },
+  { id: 'rec20', g: '其他', ico: '💪', name: '越挫越勇', desc: '累计把 20 对配错过的词补成绿色',   goal: 20, cur: c => c.recovered },
+  { id: 'fav10', g: '其他', ico: '⭐', name: '收藏家',   desc: '收藏 10 对词',                     goal: 10, cur: c => c.fav }
+];
+const achCtx = () => ({ ...getStats(), groups: groupsDone(), fav: getFavoriteKeys().size });
+function checkAchievements() {
+  const s = getStats(), c = achCtx(), got = [];
+  ACHIEVEMENTS.forEach(a => { if (!s.ach[a.id] && a.cur(c) >= a.goal) { s.ach[a.id] = Date.now(); got.push(a); } });
+  if (got.length) { s.fresh = true; saveStats(); }
+  return got;
+}
+function renderBadges() {
+  const s = getStats(), c = achCtx(), ri = rankIndex(s.correct);
+  const badges = RANKS.map((r, i) => `<div class="bd${i <= ri ? '' : ' locked'}${i === ri ? ' cur' : ''}">${badgeSVG(i, 64)}<b>${r.name}</b><span>${i <= ri ? (i === ri ? '当前段位' : '已获得') : `累计配对 ${r.min} 对解锁`}</span></div>`).join('');
+  let last = '';
+  const rows = ACHIEVEMENTS.map(a => {
+    const done = !!s.ach[a.id], v = Math.min(a.cur(c), a.goal);
+    const head = a.g !== last ? `<div class="eyebrow ach-h">${a.g}</div>` : ''; last = a.g;
+    return `${head}<div class="ach${done ? ' done' : ' locked'}"><span class="aico">${a.ico}</span><span class="atx"><b>${a.name}</b><small>${a.desc}</small>` +
+      `<span class="meter"><i style="width:${(v / a.goal * 100).toFixed(1)}%"></i></span></span><span class="acnt">${done ? '✓' : `${v}/${a.goal}`}</span></div>`;
+  }).join('');
+  const got = ACHIEVEMENTS.filter(a => s.ach[a.id]).length;
+  $('badgesBody').innerHTML = `<div class="eyebrow">徽章 · ${ri + 1}/${RANKS.length}</div><div class="badge-grid">${badges}</div>` +
+    `<div class="eyebrow ach-top">成就 · ${got}/${ACHIEVEMENTS.length}</div><div class="ach-list">${rows}</div>`;
+}
+function openBadges() {
+  const s = getStats();
+  checkAchievements();
+  if (s.fresh) { s.fresh = false; saveStats(); }
+  renderBadges(); renderRank();
+  $('start').hidden = true; $('badges').hidden = false;
+  $('badgesBody').scrollTop = 0; $('badgesBack').focus({ preventScroll: true });
 }
 function getPairStatus(P) {
   return loadPairState()[pairKey(P.w, P.p)] || 'unseen';
 }
 function statusOrder(status) {
   if (status === 'wrong') return 0;
-  if (status === 'correct') return 1;
-  return 2;
+  if (status === 'half') return 1;
+  if (status === 'correct') return 2;
+  return 3;
 }
 function pairSort(a, b) {
   const diff = statusOrder(getPairStatus(a)) - statusOrder(getPairStatus(b));
   return diff !== 0 ? diff : (a.id ?? 0) - (b.id ?? 0);
 }
 
-/* 进度条：红 = 错过，绿 = 配对过，空 = 没遇到；和「背单词」页的红绿判定完全一致 */
+/* 进度条：红 = 错过，黄 = 错过后配对了一次，绿 = 配对过（已掌握），空 = 没遇到；和「背单词」页的颜色完全一致 */
 function statusBar(pairs) {
   const n = pairs.length;
-  let w = 0, c = 0;
-  pairs.forEach(P => { const st = getPairStatus(P); if (st === 'wrong') w++; else if (st === 'correct') c++; });
+  let w = 0, h = 0, c = 0;
+  pairs.forEach(P => { const st = getPairStatus(P); if (st === 'wrong') w++; else if (st === 'half') h++; else if (st === 'correct') c++; });
   const pct = x => n ? (x / n * 100).toFixed(2) : 0;
-  return `<span class="bar" title="错 ${w} · 对 ${c} · 没遇到 ${n - w - c}"><i class="w" style="width:${pct(w)}%"></i><i class="c" style="width:${pct(c)}%"></i></span>`;
+  return `<span class="bar" title="对 ${c} · 黄 ${h} · 错 ${w} · 没遇到 ${n - w - h - c}"><i class="c" style="width:${pct(c)}%"></i><i class="h" style="width:${pct(h)}%"></i><i class="w" style="width:${pct(w)}%"></i></span>`;
 }
 /* ---------- 新手提示：用到的时候提示一次 ---------- */
 const TIPS_KEY = 'gre-eq-tips-v1';
@@ -761,7 +858,7 @@ const TIP_TEXT = {
   'first-bonus': { pc: '到第 6、13 对各奖励 8 秒' },
   'first-def':   { pc: '看释义时计时不停；点 ☆ 可以收藏这一对' },
   'first-fav':   { pc: '收藏的词可以在「收藏夹」里单独练' },
-  'first-back':  { pc: '红色是配错过的，绿色是配对过的；右键词组可以先背单词', mobile: '红色是配错过的，绿色是配对过的；长按词组可以先背单词' }
+  'first-back':  { pc: '红 = 配错过，黄 = 错后配对了一次，绿 = 已掌握；右键词组可以先背单词', mobile: '红 = 配错过，黄 = 错后配对了一次，绿 = 已掌握；长按词组可以先背单词' }
 };
 const TIP_GAP_MS = 500, TIP_FADE_MS = 250;
 /* 显示多久：按字数算，每字约 0.2 秒，最短 3 秒、最长 6 秒 */
@@ -829,6 +926,8 @@ function scheduleRoundTip() {
 }
 $('tipbar').addEventListener('click', dismissTip);
 $('helpOpen').addEventListener('click', () => { hideMenu(); $('start').hidden = true; $('help').hidden = false; $('help').querySelector('.help-body').scrollTop = 0; $('helpBack').focus({ preventScroll: true }); });
+$('rank').addEventListener('click', openBadges);
+$('badgesBack').addEventListener('click', () => { $('badges').hidden = true; $('start').hidden = false; $('rank').focus({ preventScroll: true }); });
 $('helpBack').addEventListener('click', () => { $('help').hidden = true; $('start').hidden = false; $('helpOpen').focus({ preventScroll: true }); });
 $('tipsReset').addEventListener('click', () => {
   try { localStorage.removeItem(TIPS_KEY); } catch {}
@@ -1328,8 +1427,11 @@ function correct(l, r) {
   const pair = S.pool[S.L[l]];
   S.matches++; S.combo++;
   S.matchedIds.add(S.L[l]);
+  const wasHalf = getPairStatus(pair) === 'half';
   markPair(pair, 'correct');
-  const rankUp = addCorrect();
+  const rankUp = addCorrect(S.combo, wasHalf);
+  const gotAch = checkAchievements();
+  if (gotAch.length) (S.achNew ??= []).push(...gotAch);
   if (rankUp >= 0) (S.rankUps ??= []).push(rankUp);
   let bonus = S.combo >= 3 && !S.unlimited ? 1000 : 0;
   if (S.combo === 3 && !S.unlimited) tip('first-combo');
@@ -1342,7 +1444,8 @@ function correct(l, r) {
   });
   if (bonus) { S.timeLeft += bonus; flash(`+${bonus / 1000}秒`, 'var(--ok)'); }
   $('caption').innerHTML = `<b>${pair.w}</b> = <b>${pair.p}</b> · ${pair.zh}` + (S.combo >= 3 ? `<span class="combo">连对 ${S.combo}</span>` : '') +
-    (rankUp >= 0 ? `<span class="combo">升级！${RANKS[rankUp].name}</span>` : '');
+    (rankUp >= 0 ? `<span class="combo">升级！${RANKS[rankUp].name}</span>` : '') +
+    (gotAch.length ? `<span class="combo">成就达成：${gotAch.map(a => a.ico + a.name).join('、')}</span>` : '');
   const kl = 'L' + l, kr = 'R' + r;
   S.lock.add(kl); S.lock.add(kr);
   tilesL[l].className = 'tile ok'; tilesR[r].className = 'tile ok';
@@ -1406,6 +1509,9 @@ function finish(won) {
   clearRoundSave(S.level);
   S.running = false; clearInterval(S.timer); hidePop();
   clearTipQueue(); roundsPlayed++;
+  if (won) { const st = getStats(); st.wins++; if (!S.errors) st.perfect++; saveStats(); }
+  const gotEnd = checkAchievements();
+  const achNames = [...(S.achNew || []), ...gotEnd].map(a => a.ico + a.name);
   const missedIds = [...S.missed.keys()];
   const prev = store.get(missKey(S.level), []);
   store.set(missKey(S.level), [...new Set(missedIds.concat(prev))].slice(0, 40));
@@ -1418,7 +1524,8 @@ function finish(won) {
     (S.unlimited ? `<div><span>用时</span><b>${Math.round(S.elapsed / 1000)} 秒</b></div>` : '');
   const ri = rankIndex(getStats().correct);
   $('endRank').innerHTML = `${badgeSVG(ri, 36)}<span>${RANKS[ri].name} · 累计配对 ${getStats().correct}` +
-    (S.rankUps && S.rankUps.length ? ` · 本局升级为 ${RANKS[S.rankUps[S.rankUps.length - 1]].name}！` : '') + '</span>';
+    (S.rankUps && S.rankUps.length ? ` · 本局升级为 ${RANKS[S.rankUps[S.rankUps.length - 1]].name}！` : '') +
+    (achNames.length ? ` · 成就达成：${achNames.join('、')}` : '') + '</span>';
   const okIds = [...(S.matchedIds || [])].filter(id => !S.missed.has(id));
   const endRow = (id, cls) => {
     const P = S.pool[id], fav = isFavoritePair(P.w, P.p);
@@ -1444,6 +1551,7 @@ $('againBtn').addEventListener('click', () => {
   else if (S) start(S.level);
 });
 $('menuBtn').addEventListener('click', () => { $('end').hidden = true; $('exitRoundBtn').hidden = true; renderLevels(); $('start').hidden = false; });
+checkAchievements();   // 已有的绿色进度、收藏数立刻换算成成就
 renderLevels();
 
 /* 重置：清掉所有 gre-eq- 开头的存档（含主题）。页内两步确认，因为 confirm() 在某些环境里会被屏蔽 */
@@ -1471,7 +1579,7 @@ renderLevels();
     hidePop(); hideMenu(); clearTipQueue(); closeResume();
     SETTINGS = { ...DEFAULT_SETTINGS }; applySettings();   // 时间 / 目标回到默认
     $('exitRoundBtn').hidden = true; $('end').hidden = true; $('study').hidden = true;
-    $('settings').hidden = true; $('help').hidden = true; $('start').hidden = false;
+    $('settings').hidden = true; $('help').hidden = true; $('badges').hidden = true; $('start').hidden = false;
     renderLevels();
   });
 })();
