@@ -213,6 +213,20 @@ body{
 .board-actions{display:flex;justify-content:flex-end;margin-top:-4px}
 .go.small{padding:10px 14px;font-size:.94rem}
 
+/* 新手提示条：在棋盘和页脚之间占自己的位置，不压格子；有浮层（介绍页、词表、结算页）时贴到底部 */
+.tipbar{position:relative;z-index:7;align-self:center;max-width:100%;box-sizing:border-box;
+  background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--sel);
+  border-radius:12px;padding:9px 14px;font-size:.88rem;line-height:1.45;text-align:center;cursor:pointer;
+  box-shadow:0 8px 20px var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;transform:translateY(4px);transition:opacity .25s ease,transform .25s ease}
+.tipbar.show{opacity:1;transform:none}
+.app:has(.sheet:not([hidden])) .tipbar{position:absolute;left:18px;right:18px;bottom:20px;margin-inline:auto;width:fit-content;max-width:calc(100% - 36px)}
+@media (prefers-reduced-motion: reduce){.tipbar{transition:none;transform:none}}
+.tips-reset{display:flex;gap:10px;align-items:baseline;justify-content:center;flex-wrap:wrap;margin-top:4px}
+.tips-reset button{appearance:none;border:0;background:transparent;padding:4px 2px;font:inherit;font-size:.78rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.tips-reset button:hover,.tips-reset button:focus-visible{color:var(--sel)}
+.tips-reset span{font-size:.78rem;color:var(--sel)}
+.privacy-note{margin:0;font-size:.72rem;color:var(--muted);text-align:center}
 .foot{margin-top:auto;text-align:center;font-size:.78rem;color:var(--muted);letter-spacing:.04em}
 
 /* overlays */
@@ -226,10 +240,11 @@ body{
 .sheet h2{font-family:var(--f-display);font-weight:800;font-size:2.2rem;margin:0;letter-spacing:-.04em}
 .eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .rules{margin:0;padding:0;list-style:none;display:grid;gap:8px;line-height:1.55;max-width:52ch;color:var(--ink)}
-.rules li{display:grid;grid-template-columns:4em 1fr;gap:10px;align-items:baseline}
+.rules li{display:flex;flex-wrap:wrap;justify-content:center;column-gap:10px;align-items:baseline}
 .rules li b{color:var(--sel);text-align:right;white-space:nowrap}
 #start{align-items:center;text-align:center}
-#start .rules{text-align:left;width:100%}
+#start .rules{text-align:center;width:100%}
+#start .rules li.rule-grid{display:grid;grid-template-columns:auto auto;justify-content:center;column-gap:10px;row-gap:2px;text-align:left}
 #start .levels{width:100%;max-width:720px}
 .go{font:700 1.02rem var(--f-body);background:linear-gradient(135deg, var(--go-start), var(--go-end));color:var(--go-ink);border:0;border-radius:14px;padding:14px 20px;cursor:pointer;align-self:flex-start;box-shadow:0 12px 24px var(--go-shadow)}
 .go:focus-visible{outline:3px solid var(--sel);outline-offset:3px}
@@ -284,6 +299,19 @@ body{
 .star:hover{opacity:1}
 .star.on{color:var(--star-on);opacity:1}
 #study{justify-content:flex-start}
+#help{justify-content:flex-start}
+#settings{align-items:center;text-align:center}
+.settings-body{display:grid;gap:14px;justify-items:center}
+.settings-body label{display:flex;gap:12px;align-items:center;font-weight:700;color:var(--ink)}
+.settings-body label span{color:var(--sel);min-width:3em;text-align:right}
+.settings-body select{font:inherit;font-weight:600;color:var(--ink);background:var(--tile);border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;min-width:9em;cursor:pointer}
+.settings-body select:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.settings-body .note{max-width:28em}
+#settings .row2{justify-content:center}
+.help-body{overflow:auto;min-height:0;flex:1;border-top:1px solid var(--line);padding-top:4px;line-height:1.6;color:var(--ink)}
+.help-body h3{font-size:.95rem;margin:14px 0 4px;color:var(--sel)}
+.help-body ul{margin:0;padding-left:1.2em;display:grid;gap:3px;font-size:.9rem}
+.linkbtn{appearance:none;border:0;background:transparent;padding:0;font:inherit;color:var(--sel);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .lvname{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);letter-spacing:.04em}
 /* header + theme switch */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;height:40px;flex:none}
@@ -320,6 +348,7 @@ body{
     <div class="col" id="colL"></div>
     <div class="col" id="colR"></div>
   </div>
+  <div class="tipbar" id="tipbar" role="status" aria-live="polite" hidden></div>
   <div class="foot"><span class="lvname" id="lvname"></span> · 右键（手机长按）看英文释义</div>
   <div class="pop" id="pop" role="tooltip" hidden></div>
 
@@ -327,14 +356,99 @@ body{
     <div class="eyebrow">GRE 六选二 · 等价词</div>
     <h1>等价词<mark>速配</mark></h1>
     <ol class="rules">
-      <li><b>配对</b><span>点左边一个词，再点右边同义的词。75 秒配满 20 对通关。</span></li>
-      <li><b>计时</b><span>第 6、13 对各 +8 秒，连对 3 次起每对 +1 秒，配错 −3 秒。</span></li>
-      <li><b>查词</b><span>右键（手机长按）单词看英文释义。</span></li>
-      <li><b>背单词</b><span>右键（手机长按）词组，先看整组词表：红 = 错过，绿 = 配对过，白 = 还没遇到。</span></li>
-      <li><b>收藏</b><span>点 ☆ 收藏一对词，词表、查词弹窗、结算页都能收藏；「收藏夹」可以单独配对。</span></li>
+      <li class="rule-grid"><b>配对</b><span>点左边一个词，再点右边同义的词。</span><b>规则</b><span><span class="set-goal">75 秒配满 20 对通关</span>（<button type="button" class="linkbtn" id="settingsOpen">点击调整</button>）。</span></li>
+      <li><b>右键/长按</b><span>词组 → 背单词；配对时的单词 → 看英文释义。</span></li>
+      <li><b>其他</b><span><button type="button" class="linkbtn" id="helpOpen">其他规则</button>第一次用到时会有提示。</span></li>
     </ol>
-    <div class="eyebrow">点词组开始 · 进度条：红 错过 · 绿 配对过</div>
+    <div class="eyebrow">点词组开始</div>
     <div class="levels" id="levels"></div>
+    <div class="tips-reset"><button type="button" id="tipsReset">重新显示新手提示</button><span id="tipsResetMsg" aria-live="polite"></span></div>
+    <p class="privacy-note">本站匿名统计访问和游玩次数，不收集任何个人信息。</p>
+  </section>
+
+  <section class="sheet" id="settings" hidden aria-labelledby="settingsTitle">
+    <div class="eyebrow">设置</div>
+    <h2 id="settingsTitle">一局的时间和目标</h2>
+    <div class="settings-body">
+      <label><span>时间</span><select id="setSec"></select></label>
+      <label><span>目标</span><select id="setPairs"></select></label>
+      <p class="note">改完立即生效，下一局开始用新设定；只保存在这个浏览器里。</p>
+    </div>
+    <div class="row2">
+      <button class="go" id="settingsDone" type="button">完成</button>
+      <button class="go ghost" id="settingsReset" type="button">恢复默认（75 秒 · 20 对）</button>
+    </div>
+  </section>
+
+  <section class="sheet" id="help" hidden aria-labelledby="helpTitle">
+    <div class="eyebrow">玩法详情</div>
+    <h2 id="helpTitle">全部规则和功能</h2>
+    <div class="help-body">
+      <h3>配对</h3>
+      <ul>
+        <li>左右两列各 5 个词。先点任意一列的一个词，再点另一列里和它同义的词。</li>
+        <li>点同一个词可以取消选择；在同一列里点别的词会换成选它。</li>
+        <li>当前设定：<span class="set-goal">75 秒配满 20 对通关</span>。时间和目标可以在介绍页「点击调整」里改。</li>
+        <li>限时模式下时间到就结束。选「不限时」时倒计时改成正计时，没有奖励秒数也不扣时，结算页显示用时；随时可以点「退出」。</li>
+        <li>选「全部单词」时，要把这组（或整个收藏夹）的每一对都配对一次才通关；配错的词还会再出现，但每对只算一次。</li>
+        <li>每配掉两对，空出来的 4 个位置会一起换上新词。</li>
+        <li>同一屏上每个词只有一个正确答案，不会出现两个都对的情况。</li>
+      </ul>
+      <h3>计时</h3>
+      <ul>
+        <li>配到第 6 对、第 13 对时各奖励 8 秒（进度条上的 +8 标记；目标对数不到 13 时只有第 6 对的奖励）。</li>
+        <li>连对 3 次起，每多配对一对再加 1 秒；配错一次连对清零。</li>
+        <li>配错扣 3 秒。</li>
+        <li>剩 10 秒以内倒计时变红。</li>
+        <li>看释义、收藏时计时不停。</li>
+      </ul>
+      <h3>出词顺序</h3>
+      <ul>
+        <li>每个词组里的词会先全部轮一遍才会重复，进度跨局保存。</li>
+        <li>这局配错的词，3 对之后会再出现一次。</li>
+        <li>配错过的词会记下来，下一局更早出现。</li>
+        <li>每个词组包含哪些词是固定的，所有人、每次刷新都一样。</li>
+      </ul>
+      <h3>查词</h3>
+      <ul>
+        <li>配对时右键（手机长按）一个词，弹出英文释义。</li>
+        <li>释义弹窗里点 ☆ 可以收藏这一对，再点 ★ 取消。</li>
+      </ul>
+      <h3>背单词</h3>
+      <ul>
+        <li>在介绍页右键（手机长按）词组，选「背单词」，看这组全部词对和中文意思。</li>
+        <li>词表按 红（配错过）→ 绿（配对过）→ 白（还没遇到）排序。</li>
+        <li>词表底部「开始这组」直接开始配对，「返回」回到介绍页。</li>
+      </ul>
+      <h3>红绿记录</h3>
+      <ul>
+        <li>按词对记录：只有在配对里真正出现过的那一对才会变色。</li>
+        <li>显示的是最近一次的结果：配错变红，之后配对成功变绿。</li>
+        <li>词组按钮上的进度条显示 红 / 绿 / 空 的比例，和词表里的颜色一致。</li>
+      </ul>
+      <h3>收藏夹</h3>
+      <ul>
+        <li>点 ☆ 收藏一对词：背单词词表、查词弹窗、结算页都可以。</li>
+        <li>在词组的背单词词表里，右键（手机长按）一行也能收藏或取消。</li>
+        <li>收藏夹一开始是空的，只放你自己收藏的词对；至少收藏 5 对才能在收藏夹里配对。</li>
+        <li>点「收藏夹」直接用收藏的词配对；右键（手机长按）选「背单词」看收藏列表。</li>
+        <li>收藏列表里只能点 ★ 移出，避免误删。</li>
+      </ul>
+      <h3>一局结束</h3>
+      <ul>
+        <li>结算页显示配对数和配错数。</li>
+        <li>列出这局配错的词（红）和配对成功的词（绿），每行都可以点 ☆ 收藏。</li>
+        <li>「再来一局」用同一组再玩；「换词组」回到介绍页。</li>
+        <li>配对中途可以点右上角「退出」直接回到介绍页。</li>
+      </ul>
+      <h3>其他</h3>
+      <ul>
+        <li>页面顶部的开关切换浅色 / 深色模式；没手动选过就跟随系统。</li>
+        <li>新手提示每条只出现一次；介绍页底部「重新显示新手提示」可以重置。</li>
+        <li>所有进度、红绿、收藏都只存在这个浏览器里；换浏览器、换设备或清除网站数据后会丢失。</li>
+      </ul>
+    </div>
+    <div class="row2"><button class="go ghost" id="helpBack" type="button">返回</button></div>
   </section>
 
   <section class="sheet" id="study" hidden>
@@ -361,6 +475,60 @@ body{
   </section>
 </div>
 
+<script>
+/* ---------- 匿名统计（GoatCounter）：本地打开不发；被拦截或加载失败就静默跳过 ---------- */
+(function () {
+  const GC_URL = 'https://jojo20070130.goatcounter.com/count';
+  const isLocal = location.protocol === 'file:' || ['localhost', '127.0.0.1', ''].includes(location.hostname);
+  const queue = [];
+  let state = isLocal ? 'off' : 'loading';   // loading → ready | off
+  const ready = () => window.goatcounter && typeof window.goatcounter.count === 'function';
+  const send = name => { try { window.goatcounter.count({ path: name, title: name, event: true }); } catch {} };
+
+  window.track = function (name) {
+    if (state === 'off' || typeof name !== 'string' || !name) return;
+    if (state === 'ready' && ready()) { send(name); return; }
+    if (queue.length < 30) queue.push(name);   // 还没加载完：先排队，加载完补发
+  };
+
+  if (isLocal) return;
+  const sc = document.createElement('script');
+  sc.async = true;
+  sc.src = 'https://gc.zgo.at/count.js';
+  sc.setAttribute('data-goatcounter', GC_URL);
+  sc.onload = () => {
+    if (!ready()) { state = 'off'; queue.length = 0; return; }
+    state = 'ready';
+    queue.splice(0).forEach(send);
+  };
+  sc.onerror = () => { state = 'off'; queue.length = 0; };
+  document.body.appendChild(sc);
+
+  /* 新老用户 / 回访：只存日期，不存编号或个人信息 */
+  const pad = n => String(n).padStart(2, '0');
+  const d = new Date(), today = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const VISIT_KEY = 'gre-eq-visit-v1';
+  let visit = null;
+  try { visit = JSON.parse(localStorage.getItem(VISIT_KEY) || 'null'); } catch {}
+  const valid = v => v && /^\d{4}-\d{2}-\d{2}$/.test(v.first) && /^\d{4}-\d{2}-\d{2}$/.test(v.last);
+  if (!valid(visit)) { track('visit-new'); visit = { first: today, last: today }; }
+  else { track(visit.last === today ? 'visit-same-day' : 'visit-return'); visit.last = today; }
+  try { localStorage.setItem(VISIT_KEY, JSON.stringify(visit)); } catch {}
+
+  /* 推广渠道 ?from=xxx：同一会话只发一次 */
+  let from = null;
+  try { from = new URLSearchParams(location.search).get('from'); } catch {}
+  if (from && /^[A-Za-z0-9-]{1,20}$/.test(from)) {
+    const FROM_KEY = 'gre-eq-from-sent-v1';
+    let sent = false;
+    try { sent = sessionStorage.getItem(FROM_KEY) === from; } catch {}
+    if (!sent) {
+      track('from-' + from);
+      try { sessionStorage.setItem(FROM_KEY, from); } catch {}
+    }
+  }
+})();
+</script>
 <script src="data/words.js"></script>
 <script src="data/synonyms.js"></script>
 <script>
@@ -382,7 +550,25 @@ const ADJ = {};
 const link = (a, b) => { (ADJ[a] ??= new Set()).add(b); (ADJ[b] ??= new Set()).add(a); };
 LEVELS.flat().forEach(P => link(P.w, P.p));
 
-const TARGET = 20, START_MS = 75000, BONUS_MS = 8000, PENALTY_MS = 3000;
+const BONUS_MS = 8000, PENALTY_MS = 3000;
+/* 一局的时间 / 目标对数：介绍页「可调整」里改，存在本浏览器 */
+const FAV_MIN = 5;   // 收藏夹至少几对才能配对：刚好铺满一屏（每列 5 个）
+const FAV_TOO_FEW = '目前收藏夹内单词太少，请再收藏一些单词吧！';
+const SETTINGS_KEY = 'gre-eq-settings-v1';
+const SEC_OPTIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300, 0];   // 0 = 不限时
+const PAIR_OPTIONS = [10, 15, 20, 25, 30, 40, 50, 0];   // 0 = 全部单词
+const DEFAULT_SETTINGS = { sec: 75, pairs: 20 };
+function loadSettings() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    return {
+      sec: SEC_OPTIONS.includes(v.sec) ? v.sec : DEFAULT_SETTINGS.sec,
+      pairs: PAIR_OPTIONS.includes(v.pairs) ? v.pairs : DEFAULT_SETTINGS.pairs
+    };
+  } catch { return { ...DEFAULT_SETTINGS }; }
+}
+let SETTINGS = loadSettings();
+let TARGET = SETTINGS.pairs, START_MS = SETTINGS.sec * 1000;
 const STOPS = [6, 13], SLOTS = 5;
 
 const $ = id => document.getElementById(id);
@@ -421,6 +607,7 @@ function toggleFavoritePair(a, b) {
   const added = !set.has(k);
   if (added) set.add(k); else set.delete(k);
   saveFavoriteKeys(set);
+  if (added) { tip('first-fav'); track('fav-add'); }
   return added;
 }
 function getFavoritePairs() {
@@ -465,7 +652,91 @@ function statusBar(pairs) {
   const pct = x => n ? (x / n * 100).toFixed(2) : 0;
   return `<span class="bar" title="错 ${w} · 对 ${c} · 没遇到 ${n - w - c}"><i class="w" style="width:${pct(w)}%"></i><i class="c" style="width:${pct(c)}%"></i></span>`;
 }
+/* ---------- 新手提示：用到的时候提示一次 ---------- */
+const TIPS_KEY = 'gre-eq-tips-v1';
+const TIP_TEXT = {
+  'first-round': { pc: '不认识的词，右键可以看英文释义', mobile: '不认识的词，长按可以看英文释义' },
+  'first-wrong': { pc: '配错扣 3 秒，配错的词会更早再出现' },
+  'first-combo': { pc: '连对 3 次起，每对多加 1 秒' },
+  'first-bonus': { pc: '到第 6、13 对各奖励 8 秒' },
+  'first-def':   { pc: '看释义时计时不停；点 ☆ 可以收藏这一对' },
+  'first-fav':   { pc: '收藏的词可以在「收藏夹」里单独练' },
+  'first-back':  { pc: '红色是配错过的，绿色是配对过的；右键词组可以先背单词', mobile: '红色是配错过的，绿色是配对过的；长按词组可以先背单词' }
+};
+const TIP_GAP_MS = 500, TIP_FADE_MS = 250;
+/* 显示多久：按字数算，每字约 0.2 秒，最短 3 秒、最长 6 秒 */
+const tipDuration = msg => Math.min(6000, Math.max(3000, msg.length * 200));
+const isMobile = () => window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+const tipState = { queue: [], current: null, timer: null, roundTimer: null };
+let roundsPlayed = 0;
+
+function loadSeenTips() {
+  try { const a = JSON.parse(localStorage.getItem(TIPS_KEY) || '[]'); return new Set(Array.isArray(a) ? a : []); }
+  catch { return new Set(); }
+}
+function markTipSeen(id) {
+  try { const set = loadSeenTips(); set.add(id); localStorage.setItem(TIPS_KEY, JSON.stringify([...set])); } catch {}
+}
+/* 唯一入口：看过的、正在显示的、已经排队的都直接跳过 */
+function tip(id, text) {
+  if (loadSeenTips().has(id) || (tipState.current && tipState.current.id === id) || tipState.queue.some(t => t.id === id)) return;
+  const entry = TIP_TEXT[id] || {};
+  const msg = text || (isMobile() && entry.mobile) || entry.pc;
+  if (!msg) return;
+  tipState.queue.push({ id, msg });
+  if (!tipState.current && !tipState.timer) showNextTip();
+}
+/* 即时通知：不记“看过”，插队立刻显示（比如收藏夹词太少） */
+function notice(msg) {
+  tipState.queue = tipState.queue.filter(t => t.msg !== msg);
+  tipState.queue.unshift({ id: null, msg });
+  if (tipState.current) { dismissTip(); return; }
+  if (tipState.timer) clearTimeout(tipState.timer);
+  showNextTip();
+}
+function showNextTip() {
+  tipState.timer = null;
+  const next = tipState.queue.shift();
+  if (!next) return;
+  const bar = $('tipbar');
+  tipState.current = next;          // 存整条（通知的 id 是 null，不能拿 id 判断有没有在显示）
+  if (next.id) markTipSeen(next.id);   // 显示出来才算看过（通知不记）
+  bar.textContent = next.msg;
+  bar.hidden = false;
+  void bar.offsetWidth;
+  bar.classList.add('show');
+  tipState.timer = setTimeout(dismissTip, tipDuration(next.msg));
+}
+function dismissTip() {
+  clearTimeout(tipState.timer); tipState.timer = null;
+  if (!tipState.current) return;
+  const bar = $('tipbar');
+  bar.classList.remove('show');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  tipState.timer = setTimeout(() => {
+    bar.hidden = true; tipState.current = null;
+    tipState.timer = tipState.queue.length ? setTimeout(showNextTip, TIP_GAP_MS) : null;
+  }, reduce ? 0 : TIP_FADE_MS);
+}
+/* 一局结束 / 退出：清掉还没显示的（不算看过），正在显示的那条让它自己走完 */
+function clearTipQueue() {
+  tipState.queue.length = 0;
+  clearTimeout(tipState.roundTimer); tipState.roundTimer = null;
+}
+function scheduleRoundTip() {
+  clearTimeout(tipState.roundTimer);
+  tipState.roundTimer = setTimeout(() => { tipState.roundTimer = null; if (S && S.running) tip('first-round'); }, 2000);
+}
+$('tipbar').addEventListener('click', dismissTip);
+$('helpOpen').addEventListener('click', () => { hideMenu(); $('start').hidden = true; $('help').hidden = false; $('help').querySelector('.help-body').scrollTop = 0; $('helpBack').focus({ preventScroll: true }); });
+$('helpBack').addEventListener('click', () => { $('help').hidden = true; $('start').hidden = false; $('helpOpen').focus({ preventScroll: true }); });
+$('tipsReset').addEventListener('click', () => {
+  try { localStorage.removeItem(TIPS_KEY); } catch {}
+  $('tipsResetMsg').textContent = '已重置，下一局会重新提示';
+});
+
 function renderLevels() {
+  if (roundsPlayed > 0) tip('first-back');
   const box = $('levels'); box.innerHTML = '';
   const favPairs = getFavoritePairs();
   const groupButtons = GROUP_ORDER.map(realIndex => {
@@ -491,7 +762,7 @@ function renderLevels() {
   favBtn.addEventListener('click', () => {
     if (lvSuppress) { lvSuppress = false; return; }
     hideMenu();
-    if (favPairs.length) startFavorites(); else openFavoriteStudy();
+    startFavorites();
   });
   favBtn.addEventListener('contextmenu', e => { e.preventDefault(); showMenu('favorites', e.clientX, e.clientY); });
   favBtn.addEventListener('pointerdown', e => {
@@ -576,19 +847,19 @@ function openFavoriteStudy() {
   hideMenu();
   studyMode = 'favorites';
   const rows = getFavoritePairs().map((item, id) => ({ id, w: item.a, p: item.b, zh: item.zh })).sort(pairSort);
-  $('studyEyebrow').textContent = `${rows.length} 对 · 点 ★ 移出收藏夹`;
+  $('studyEyebrow').textContent = `${rows.length} 对 · 点 ★ 移出收藏夹` + (rows.length < FAV_MIN ? ` · 至少 ${FAV_MIN} 对才能配对` : '');
   $('studyTitle').textContent = FAVORITE_NAME;
   $('wordlist').innerHTML = rows.length
     ? rows.map(P => rowHTML(P, getPairStatus(P))).join('')
-    : '<div class="note">收藏夹还是空的。在词组的「背单词」页里右键一个词对，就能加进来。</div>';
+    : '<div class="note">收藏夹还是空的。在词组的「背单词」页里点 ☆ 或右键一个词对，就能加进来。</div>';
   bindRows();
   $('wordlist').scrollTop = 0;
   $('studyGo').textContent = '开始配对';
-  $('studyGo').disabled = rows.length === 0;
+  $('studyGo').disabled = false;
   $('studyGo').onclick = () => startFavorites();
   $('start').hidden = true; $('study').hidden = false;
 }
-$('lvStudy').addEventListener('click', () => { if (menuLevel === 'favorites') openFavoriteStudy(); else openStudy(menuLevel); });
+$('lvStudy').addEventListener('click', () => { track('study-open'); if (menuLevel === 'favorites') openFavoriteStudy(); else openStudy(menuLevel); });
 $('studyBack').addEventListener('click', () => { $('study').hidden = true; renderLevels(); $('start').hidden = false; });
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#lvmenu')) hideMenu(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenu(); });
@@ -610,14 +881,59 @@ for (let i = 0; i < SLOTS; i++) {
     col.appendChild(b); arr.push(b);
   }
 }
-STOPS.concat([TARGET]).forEach(n => {
-  const s = document.createElement('div');
-  s.className = 'stop' + (n === TARGET ? ' goal' : '');
-  s.style.left = (n / TARGET * 100) + '%';
-  s.textContent = n === TARGET ? '终' : '+8';
-  s.dataset.n = n;
-  $('track').appendChild(s);
-});
+function goalText(sec, pairs) {
+  const t = sec ? `${sec} 秒` : '不限时，';
+  return pairs ? `${t}配满 ${pairs} 对通关` : `${t}配完整组单词通关`;
+}
+function buildStops(target = TARGET, unlimited = !START_MS) {
+  $('track').querySelectorAll('.stop').forEach(el => el.remove());
+  const marks = (unlimited ? [] : STOPS.filter(n => n < target)).concat([target]);
+  marks.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'stop' + (n === target ? ' goal' : '');
+    el.style.left = (n / target * 100) + '%';
+    el.textContent = n === target ? '终' : '+8';
+    el.dataset.n = n;
+    $('track').appendChild(el);
+  });
+}
+function applySettings() {
+  TARGET = SETTINGS.pairs; START_MS = SETTINGS.sec * 1000;
+  document.querySelectorAll('.set-goal').forEach(el => { el.textContent = goalText(SETTINGS.sec, SETTINGS.pairs); });
+  if (!S || !S.running) {
+    $('clock').firstChild.nodeValue = SETTINGS.sec || 0;
+    $('count').textContent = `0/${TARGET || '全部'}`;
+    $('fill').style.width = '0%';
+    buildStops(TARGET || 20);
+  }
+}
+function saveSettings(next) {
+  SETTINGS = next;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); } catch {}
+  applySettings();
+}
+(function initSettings() {
+  const fill = (sel, opts, unit) => { sel.innerHTML = opts.map(v => `<option value="${v}">${v} ${unit}</option>`).join(''); };
+  fill($('setSec'), SEC_OPTIONS, '秒');
+  fill($('setPairs'), PAIR_OPTIONS, '对');
+  $('setSec').querySelector('option[value="0"]').textContent = '不限时';
+  $('setPairs').querySelector('option[value="0"]').textContent = '全部单词';
+  const sync = () => { $('setSec').value = SETTINGS.sec; $('setPairs').value = SETTINGS.pairs; };
+  const onChange = () => saveSettings({ sec: Number($('setSec').value), pairs: Number($('setPairs').value) });
+  $('setSec').addEventListener('change', onChange);
+  $('setPairs').addEventListener('change', onChange);
+  $('settingsReset').addEventListener('click', () => { saveSettings({ ...DEFAULT_SETTINGS }); sync(); });
+  $('settingsOpen').addEventListener('click', () => {
+    hideMenu(); sync();
+    $('start').hidden = true; $('settings').hidden = false;
+    $('setSec').focus({ preventScroll: true });
+  });
+  $('settingsDone').addEventListener('click', () => {
+    $('settings').hidden = true; $('start').hidden = false;
+    $('settingsOpen').focus({ preventScroll: true });
+  });
+  applySettings();
+})();
 
 function showDef(side, i, el) {
   if (!S || !S.running) return;
@@ -628,6 +944,8 @@ function showDef(side, i, el) {
   const entry = DEF[word] || {};
   const def = typeof entry === 'string' ? entry : (entry.def || '暂无释义');
   const isFavorite = isFavoritePair(P.w, P.p);
+  tip('first-def');
+  if (!S.defTracked) { S.defTracked = true; track('def-open'); }   // 每局只记第一次
   pop.innerHTML = `<b>${word}</b>${def}<div class="pop-actions"><button type="button" class="star${isFavorite ? ' on' : ''}" aria-label="${isFavorite ? '移出收藏夹' : '加入收藏夹'}" aria-pressed="${isFavorite}">${isFavorite ? '★' : '☆'}</button></div>`;
   pop.hidden = false;
   const app = document.querySelector('.app').getBoundingClientRect(), t = el.getBoundingClientRect();
@@ -664,24 +982,31 @@ function fits(id, vis, active) {
 function pickNext() {
   const vis = boardWords();
   const active = new Set([...S.L, ...S.R].filter(x => x !== null));
-  const qi = S.queue.findIndex(q => q.due <= S.matches && fits(q.id, vis, active));
+  const qi = S.queue.findIndex(q => q.due <= S.matches && !(S.allMode && S.matchedIds.has(q.id)) && fits(q.id, vis, active));
   if (qi >= 0) { const id = S.queue[qi].id; S.queue.splice(qi, 1); return id; }
   for (let round = 0; round < 2; round++) {
-    if (!S.bag.length) S.bag = shuffle(S.pool.map(P => P.id).filter(id => !active.has(id)));
+    if (!S.bag.length && !S.allMode) S.bag = shuffle(S.pool.map(P => P.id).filter(id => !active.has(id)));
     const bi = S.bag.findIndex(id => fits(id, vis, active));
-    if (bi >= 0) { const id = S.bag[bi]; S.bag.splice(bi, 1); store.set(bagKey(S.level), S.bag); return id; }
+    if (bi >= 0) { const id = S.bag[bi]; S.bag.splice(bi, 1); if (!S.allMode) store.set(bagKey(S.level), S.bag); return id; }
     if (round === 0 && S.bag.length) break;
   }
-  const any = S.pool.find(P => fits(P.id, vis, active));
+  const any = S.pool.find(P => !(S.allMode && S.matchedIds.has(P.id)) && fits(P.id, vis, active));
   return any ? any.id : null;
 }
 
+/* 按当前设定给这一局定目标和计时方式 */
+function setupRound() {
+  S.unlimited = !START_MS;
+  S.allMode = !TARGET;
+  S.target = S.allMode ? S.pool.length : TARGET;
+  S.elapsed = 0;
+  S.matchedIds = new Set();
+  if (S.allMode) { S.bag = shuffle(S.pool.map(P => P.id)); S.queue = []; }   // 全部单词：每对各来一遍，不动词组的轮换进度
+}
+const progress = () => S.allMode ? S.matchedIds.size : S.matches;
 function startFavorites() {
   const pairList = getFavoritePairs();
-  if (!pairList.length) {
-    renderLevels();
-    return;
-  }
+  if (pairList.length < FAV_MIN) { notice(FAV_TOO_FEW); return; }
   const pool = pairList.map((pair, id) => ({ id, w: pair.a, p: pair.b, zh: pair.zh }));
   const bag = shuffle(pool.map(P => P.id));
   const queue = [];
@@ -693,9 +1018,12 @@ function startFavorites() {
     missed: new Map(), stopsHit: new Set(), timer: null,
     favoriteMode: true
   };
+  setupRound();
   const ids = [];
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
+  trackEmptySlots();
+  buildStops(S.target, S.unlimited);
   document.querySelectorAll('.stop').forEach(s => s.classList.remove('hit'));
   $('lvname').textContent = FAVORITE_NAME;
   $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
@@ -705,11 +1033,15 @@ function startFavorites() {
   S.timer = setInterval(tick, 100);
   render();
   tilesL[0].focus({ preventScroll: true });
+  clearTipQueue(); $('tipsResetMsg').textContent = '';
+  scheduleRoundTip();
+  track(S.favoriteMode ? 'round-start-fav' : `round-start-g${S.level + 1}`);
 }
 
 function exitRound() {
+  if (S && S.running) track('round-exit');
   if (S && S.timer) clearInterval(S.timer);
-  S = null; hidePop();
+  S = null; hidePop(); clearTipQueue();
   $('exitRoundBtn').hidden = true;
   $('end').hidden = true; $('study').hidden = true; $('start').hidden = false;
   renderLevels();
@@ -730,9 +1062,12 @@ function start(level) {
     matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
     missed: new Map(), stopsHit: new Set(), timer: null, favoriteMode: false
   };
+  setupRound();
   const ids = [];
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
+  trackEmptySlots();
+  buildStops(S.target, S.unlimited);
   document.querySelectorAll('.stop').forEach(s => s.classList.remove('hit'));
   $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
   $('lvname').textContent = META[level].name;
@@ -742,23 +1077,29 @@ function start(level) {
   S.timer = setInterval(tick, 100);
   render();
   tilesL[0].focus({ preventScroll: true });
+  clearTipQueue(); $('tipsResetMsg').textContent = '';
+  scheduleRoundTip();
+  track(S.favoriteMode ? 'round-start-fav' : `round-start-g${S.level + 1}`);
 }
 
 function tick() {
   const now = Date.now();
+  if (S.unlimited) { S.elapsed += now - S.last; S.last = now; renderClock(); return; }
   S.timeLeft -= now - S.last; S.last = now;
   if (S.timeLeft <= 0) { S.timeLeft = 0; finish(false); }
   renderClock();
 }
 function renderClock() {
-  const sec = Math.ceil(S.timeLeft / 1000), c = $('clock');
+  const c = $('clock');
+  if (S.unlimited) { c.firstChild.nodeValue = Math.floor(S.elapsed / 1000); c.classList.remove('low'); return; }
+  const sec = Math.ceil(S.timeLeft / 1000);
   c.firstChild.nodeValue = sec;
   c.classList.toggle('low', sec <= 10);
 }
 function render() {
   for (let i = 0; i < SLOTS; i++) { paint(tilesL[i], S.L[i], 'L', i); paint(tilesR[i], S.R[i], 'R', i); }
-  $('fill').style.width = Math.min(100, S.matches / TARGET * 100) + '%';
-  $('count').textContent = `${S.matches}/${TARGET}`;
+  $('fill').style.width = Math.min(100, progress() / S.target * 100) + '%';
+  $('count').textContent = `${progress()}/${S.target}`;
   renderClock();
 }
 function paint(el, id, side, i) {
@@ -791,12 +1132,14 @@ function flash(text, color) {
 function correct(l, r) {
   const pair = S.pool[S.L[l]];
   S.matches++; S.combo++;
-  (S.matchedIds ??= new Set()).add(S.L[l]);
+  S.matchedIds.add(S.L[l]);
   markPair(pair, 'correct');
-  let bonus = S.combo >= 3 ? 1000 : 0;
-  STOPS.forEach(n => {
-    if (S.matches === n && !S.stopsHit.has(n)) {
+  let bonus = S.combo >= 3 && !S.unlimited ? 1000 : 0;
+  if (S.combo === 3 && !S.unlimited) tip('first-combo');
+  if (!S.unlimited) STOPS.filter(n => n < S.target).forEach(n => {
+    if (progress() === n && !S.stopsHit.has(n)) {
       S.stopsHit.add(n); bonus += BONUS_MS;
+      if (n === STOPS[0]) tip('first-bonus');
       document.querySelector(`.stop[data-n="${n}"]`).classList.add('hit');
     }
   });
@@ -806,9 +1149,9 @@ function correct(l, r) {
   S.lock.add(kl); S.lock.add(kr);
   tilesL[l].className = 'tile ok'; tilesR[r].className = 'tile ok';
   render();
-  if (S.matches >= TARGET) {
+  if (progress() >= S.target) {
     S.running = false; clearInterval(S.timer);
-    document.querySelector(`.stop[data-n="${TARGET}"]`).classList.add('hit');
+    document.querySelector(`.stop[data-n="${S.target}"]`).classList.add('hit');
     setTimeout(() => { S.running = true; finish(true); }, 450);
     return;
   }
@@ -817,14 +1160,20 @@ function correct(l, r) {
     S.L[l] = null; S.R[r] = null;
     S.lock.delete(kl); S.lock.delete(kr);
     S.emptyL.push(l); S.emptyR.push(r);
-    if (S.emptyL.length >= 2) refill();
+    if (S.emptyL.length >= 2 || S.L.every(x => x === null)) refill();
     render();
   }, 300);
 }
 
+/* 开局没铺满的空位也要登记，否则之后补不上词 */
+function trackEmptySlots() {
+  S.emptyL = []; S.emptyR = [];
+  S.L.forEach((id, i) => { if (id === null) S.emptyL.push(i); });
+  S.R.forEach((id, i) => { if (id === null) S.emptyR.push(i); });
+}
 function refill() {
   const ls = shuffle(S.emptyL.splice(0, 2)), rs = shuffle(S.emptyR.splice(0, 2));
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < ls.length; k++) {
     const id = pickNext();
     if (id === null) { S.emptyL.push(ls[k]); S.emptyR.push(rs[k]); continue; }
     S.L[ls[k]] = id; S.R[rs[k]] = id;
@@ -836,8 +1185,11 @@ function wrong(l, r) {
   const left = S.pool[S.L[l]], right = S.pool[S.R[r]];
   S.combo = 0; S.errors++;
   markPair(left, 'wrong'); markPair(right, 'wrong');
-  S.timeLeft = Math.max(0, S.timeLeft - PENALTY_MS);
-  flash(`-${PENALTY_MS / 1000}秒`, 'var(--bad)');
+  if (!S.unlimited) {
+    S.timeLeft = Math.max(0, S.timeLeft - PENALTY_MS);
+    flash(`-${PENALTY_MS / 1000}秒`, 'var(--bad)');
+    tip('first-wrong');
+  }
   [S.L[l], S.R[r]].forEach(id => {
     S.missed.set(id, (S.missed.get(id) || 0) + 1);
     if (!S.queue.some(q => q.id === id)) S.queue.push({ id, due: S.matches + 3 });
@@ -852,16 +1204,19 @@ function wrong(l, r) {
 
 function finish(won) {
   if (!S || !S.running) return;
+  track(won ? 'round-win' : 'round-timeout');
   S.running = false; clearInterval(S.timer); hidePop();
+  clearTipQueue(); roundsPlayed++;
   const missedIds = [...S.missed.keys()];
   const prev = store.get(missKey(S.level), []);
   store.set(missKey(S.level), [...new Set(missedIds.concat(prev))].slice(0, 40));
-  if (!S.favoriteMode) store.set(bagKey(S.level), S.bag);
+  if (!S.favoriteMode && !S.allMode) store.set(bagKey(S.level), S.bag);
   $('endEyebrow').textContent = S.favoriteMode ? `${FAVORITE_NAME} · ${won ? '走完全程' : '时间到'}` : `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
-  $('endTitle').textContent = won ? '通关' : `配了 ${S.matches} 对`;
+  $('endTitle').textContent = won ? '通关' : `配了 ${progress()} 对`;
   $('stats').innerHTML =
-    `<div><span>配对</span><b>${S.matches}/${TARGET}</b></div>` +
-    `<div><span>配错</span><b>${S.errors}</b></div>`;
+    `<div><span>配对</span><b>${progress()}/${S.target}</b></div>` +
+    `<div><span>配错</span><b>${S.errors}</b></div>` +
+    (S.unlimited ? `<div><span>用时</span><b>${Math.round(S.elapsed / 1000)} 秒</b></div>` : '');
   const okIds = [...(S.matchedIds || [])].filter(id => !S.missed.has(id));
   const endRow = (id, cls) => {
     const P = S.pool[id], fav = isFavoritePair(P.w, P.p);
