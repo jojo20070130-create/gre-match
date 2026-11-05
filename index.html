@@ -9,117 +9,190 @@
 
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;600;700;800&family=Manrope:wght@400;500;700;800&display=swap">
 <style>
 /* Layout: one-screen game — status strip (timer · progress with reward stops) above two equal columns of word tiles. Study-desk ink blue with a highlighter accent. */
 :root{
-  --paper:#eaeef5;
-  --tile:#ffffff;
-  --ink:#16213b;
-  --muted:#5d6884;
-  --line:#c9d1e0;
-  --hl:#ffe04a;
-  --hl-ink:#3b3000;
-  --ok:#1f9467;
-  --bad:#d64545;
-  --sel:#2f5bd3;
-  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --paper:#dce9f7;
+  --paper-strong:#c3d9f2;
+  --panel:rgba(240,246,255,0.86);
+  --tile:#f6faff;
+  --ink:#14305a;
+  --muted:#4a6a93;
+  --line:#b9cfeb;
+  --hl:#3b82f6;
+  --hl-ink:#ffffff;
+  --ok:#2c7a66;
+  --ok-bg:rgba(44,122,102,0.12);
+  --bad:#b75b6d;
+  --bad-bg:rgba(183,91,109,0.12);
+  --sel:#1f5fd6;
+  --shadow:rgba(20,48,90,0.12);
+  --f-display:"Bricolage Grotesque", "Manrope", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-mono:"IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0f1524;--tile:#19223a;--ink:#e7ecf6;--muted:#97a2bd;--line:#2c3854;
-  --hl:#ffd93a;--hl-ink:#2a2200;--ok:#3cc48d;--bad:#f06a6a;--sel:#7d9cff;color-scheme:dark}}
+  --paper:#0b1a30; --paper-strong:#102544; --panel:rgba(20,44,80,0.85);
+  --tile:#16304f; --ink:#e3eefc; --muted:#9bb4d6; --line:#26446c;
+  --hl:#5aa0f2; --hl-ink:#06172e; --ok:#3cc4b0; --bad:#f2667c;
+  --sel:#7fb0ff; --shadow:rgba(0,0,0,0.35);color-scheme:dark;
+}}
 :root[data-theme="dark"]{
-  --paper:#0f1524;--tile:#19223a;--ink:#e7ecf6;--muted:#97a2bd;--line:#2c3854;
-  --hl:#ffd93a;--hl-ink:#2a2200;--ok:#3cc48d;--bad:#f06a6a;--sel:#7d9cff;color-scheme:dark}
+  --paper:#0b1a30; --paper-strong:#102544; --panel:rgba(20,44,80,0.85);
+  --tile:#16304f; --ink:#e3eefc; --muted:#9bb4d6; --line:#26446c;
+  --hl:#5aa0f2; --hl-ink:#06172e; --ok:#3cc4b0; --bad:#f2667c;
+  --sel:#7fb0ff; --shadow:rgba(0,0,0,0.35);color-scheme:dark;
+}
 
 html,body{height:100%}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;
-  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at top left, rgba(168,213,255,0.32), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(107,165,255,0.14), transparent 28%),
+    linear-gradient(180deg, #edf5ff 0%, var(--paper) 100%);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px;
+  letter-spacing:0.01em;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
 *{box-sizing:border-box}
-.app{max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;gap:18px;padding-block:18px;position:relative}
+.app{
+  max-width:620px;
+  margin:0 auto;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  padding:18px 18px 20px;
+  position:relative;
+}
 
 /* status strip */
-.status{display:flex;align-items:center;gap:14px}
-.clock{font-family:var(--f-mono);font-weight:600;font-size:1.35rem;font-variant-numeric:tabular-nums;min-width:3.6ch;text-align:right;position:relative}
+.status{
+  display:flex;align-items:center;gap:14px;
+  background:var(--panel);border:1px solid rgba(120,118,108,0.16);
+  border-radius:18px;padding:12px 14px;box-shadow:0 10px 30px var(--shadow);
+  backdrop-filter:blur(8px);
+}
+.clock{font-family:var(--f-mono);font-weight:700;font-size:1.45rem;font-variant-numeric:tabular-nums;min-width:3.8ch;text-align:right;position:relative;color:var(--ink)}
 .clock.low{color:var(--bad)}
-.track{flex:1;position:relative;height:16px;border-radius:99px;background:var(--line)}
-.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:var(--hl);transition:width .35s cubic-bezier(.3,1.4,.5,1)}
+.track{flex:1;position:relative;height:18px;border-radius:999px;background:linear-gradient(90deg, rgba(206,212,222,0.9), rgba(208,196,180,0.8));box-shadow:inset 0 1px 2px rgba(17,23,34,0.08)}
+.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:999px;background:linear-gradient(90deg, #b8d8ff 0%, #8cbcff 45%, #6aa9ff 100%);transition:width .35s cubic-bezier(.3,1.4,.5,1);box-shadow:0 0 0 1px rgba(23,49,77,0.06)}
 .stop{position:absolute;top:50%;width:26px;height:26px;margin-left:-13px;transform:translateY(-50%);border-radius:50%;
-  background:var(--tile);border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-size:.62rem;font-weight:600;color:var(--muted)}
-.stop.hit{background:var(--hl);border-color:var(--hl);color:var(--hl-ink)}
-.stop.goal{border-radius:7px}
-.count{font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:4.5ch}
-.float{position:absolute;right:0;top:-6px;font-family:var(--f-mono);font-size:.85rem;font-weight:600;pointer-events:none;opacity:0;white-space:nowrap}
+  background:var(--tile);border:2px solid rgba(88,101,126,0.28);display:grid;place-items:center;font-family:var(--f-mono);font-size:.62rem;font-weight:700;color:var(--muted);box-shadow:0 2px 8px rgba(31,36,50,0.08)}
+.stop.hit{background:linear-gradient(135deg, #edf6ff, #b8d8ff);border-color:transparent;color:var(--hl-ink)}
+.stop.goal{border-radius:9px;width:28px;height:28px}
+.count{font-family:var(--f-mono);font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:4.8ch;text-align:right}
+.float{position:absolute;right:0;top:-8px;font-family:var(--f-mono);font-size:.8rem;font-weight:700;pointer-events:none;opacity:0;white-space:nowrap}
 .float.show{animation:rise .9s ease-out}
 @keyframes rise{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-22px)}}
 
-.caption{min-height:1.5em;text-align:center;color:var(--muted);font-size:.92rem}
+.caption{min-height:1.5em;text-align:center;color:var(--muted);font-size:.92rem;padding-inline:8px;letter-spacing:.02em}
 .caption b{color:var(--ink)}
-.combo{font-family:var(--f-mono);color:var(--sel);font-weight:600;margin-left:.4em}
+.combo{font-family:var(--f-mono);color:var(--sel);font-weight:700;margin-left:.4em}
 
 /* board */
-.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .col{display:flex;flex-direction:column;gap:12px;min-width:0}
-.tile{font:700 clamp(.95rem,4vw,1.12rem)/1.15 var(--f-body);color:var(--ink);background:var(--tile);
-  border:2px solid var(--line);border-bottom-width:4px;border-radius:12px;min-height:62px;padding:8px 10px;
-  cursor:pointer;transition:transform .08s, background .15s, border-color .15s, opacity .25s;overflow-wrap:anywhere;
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.tile{
+  font:700 clamp(.95rem,4vw,1.12rem)/1.15 var(--f-body);color:var(--ink);background:linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,250,247,0.88));
+  border:1.5px solid rgba(86, 138, 228, 0.9);border-bottom-width:4px;border-radius:16px;min-height:64px;padding:10px 12px;
+  cursor:pointer;transition:transform .12s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease, opacity .25s ease;overflow-wrap:anywhere;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;box-shadow:0 10px 18px rgba(31,36,50,0.06)
+}
+.tile:hover{transform:translateY(-1px);box-shadow:0 14px 22px rgba(31,36,50,0.08)}
 .tile.new{animation:popin .28s ease-out}
-@keyframes popin{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
-.pop{position:absolute;z-index:5;max-width:min(300px,calc(100% - 8px));background:var(--ink);color:var(--paper);
-  border-radius:10px;padding:10px 12px;font-size:.92rem;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+@keyframes popin{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}
+.pop{position:absolute;z-index:5;max-width:min(300px,calc(100% - 8px));background:linear-gradient(180deg, #1f2432 0%, #161d2b 100%);color:#f8f5ef;
+  border-radius:14px;padding:10px 12px;font-size:.92rem;line-height:1.4;box-shadow:0 16px 34px rgba(17,22,34,0.25)}
 .pop b{display:block;font-family:var(--f-display);font-size:1.05rem;margin-bottom:2px}
 .tile:active{transform:translateY(2px)}
 .tile:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
-.tile.sel{border-color:var(--sel);background:color-mix(in srgb,var(--sel) 12%,var(--tile))}
-.tile.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--tile));color:var(--ok)}
-.tile.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--tile));animation:shake .35s}
+.tile.sel{border-color:var(--sel);background:linear-gradient(180deg, rgba(79,110,247,0.1), rgba(255,255,255,0.95));box-shadow:0 0 0 3px rgba(79,110,247,0.12)}
+.tile.ok{border-color:rgba(47,141,116,0.8);background:linear-gradient(180deg, rgba(47,141,116,0.14), rgba(255,255,255,0.98));color:var(--ok)}
+.tile.bad{border-color:rgba(207,90,76,0.8);background:linear-gradient(180deg, rgba(207,90,76,0.14), rgba(255,255,255,0.98));animation:shake .35s}
 .tile.gone{opacity:0;pointer-events:none}
 @keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
 
-.foot{margin-top:auto;text-align:center;font-size:.8rem;color:var(--muted)}
+.board-actions{display:flex;justify-content:flex-end;margin-top:-4px}
+.go.small{padding:10px 14px;font-size:.94rem}
+
+.foot{margin-top:auto;text-align:center;font-size:.78rem;color:var(--muted);letter-spacing:.04em}
 
 /* overlays */
-.sheet{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px;background:var(--paper);padding-block:24px}
-.sheet h1{font-family:var(--f-display);font-weight:800;font-size:clamp(2.4rem,11vw,3.4rem);line-height:1;margin:0;text-wrap:balance;letter-spacing:-.01em}
-.sheet h1 mark{background:linear-gradient(transparent 55%,var(--hl) 55%);color:inherit;padding:0 .08em}
-.sheet h2{font-family:var(--f-display);font-weight:800;font-size:2.2rem;margin:0}
-.eyebrow{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.rules{margin:0;padding-left:1.2em;display:grid;gap:6px;line-height:1.5;max-width:46ch}
-.go{font:700 1.1rem var(--f-body);background:var(--ink);color:var(--paper);border:0;border-radius:12px;padding:14px 22px;cursor:pointer;align-self:flex-start}
+.sheet{
+  position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px;
+  background:linear-gradient(180deg, rgba(240,246,255,0.93), rgba(220,233,247,0.9));
+  backdrop-filter:blur(12px);padding:22px 18px 24px;border-radius:24px;overflow:auto;justify-content:safe center
+}
+.sheet h1{font-family:var(--f-display);font-weight:800;font-size:clamp(2.7rem,9vw,4rem);line-height:.94;margin:0;text-wrap:balance;letter-spacing:-.06em}
+.sheet h1 mark{background:linear-gradient(180deg, transparent 58%, rgba(59,130,246,0.78) 58%);color:inherit;padding:0 .12em}
+.sheet h2{font-family:var(--f-display);font-weight:800;font-size:2.2rem;margin:0;letter-spacing:-.04em}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rules{margin:0;padding:0;list-style:none;display:grid;gap:8px;line-height:1.55;max-width:52ch;color:var(--ink)}
+.rules li{display:grid;grid-template-columns:4em 1fr;gap:10px;align-items:baseline}
+.rules li b{color:var(--sel);text-align:right;white-space:nowrap}
+#start{align-items:center;text-align:center}
+#start .rules{text-align:left;width:100%}
+#start .levels{width:100%;max-width:720px}
+.go{font:700 1.02rem var(--f-body);background:linear-gradient(135deg, var(--hl), #1f5fd6);color:var(--hl-ink);border:0;border-radius:14px;padding:14px 20px;cursor:pointer;align-self:flex-start;box-shadow:0 12px 24px rgba(31,86,170,0.18)}
 .go:focus-visible{outline:3px solid var(--sel);outline-offset:3px}
+.go.ghost{background:transparent;color:var(--ink);border:1.5px solid rgba(90,103,126,0.32);box-shadow:none}
 .stats{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .stats div span{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.08em}
 .stats div b{font-size:1.4rem}
 .missed{display:grid;gap:6px;max-height:38vh;overflow:auto;border-top:1px solid var(--line);padding-top:12px}
-.missed .row{display:grid;grid-template-columns:1fr auto;gap:10px}
+.missed .row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:4px 8px;border-radius:10px}
+.missed .row.wrong{background:var(--bad-bg);color:var(--bad)}
+.missed .row.correct{background:var(--ok-bg);color:var(--ok)}
+.missed .row.wrong em,.missed .row.correct em{color:inherit;opacity:.9}
+.missed .eyebrow{margin-top:6px}
 .missed .row em{font-style:normal;color:var(--muted)}
 .note{color:var(--muted);font-size:.85rem}
 @media (prefers-reduced-motion: reduce){.tile.bad{animation:none}.float.show{animation:none;opacity:1}.fill{transition:none}}
-.sheet{overflow:auto;justify-content:safe center}
-.levels{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.levels{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin-top:4px}
 .lv{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;text-align:left;width:100%;
-  font:inherit;color:var(--ink);background:var(--tile);border:2px solid var(--line);border-bottom-width:4px;border-radius:12px;padding:12px 14px;cursor:pointer}
-.lv:hover{border-color:var(--sel)}
+  font:inherit;color:var(--ink);background:#ffffff;border:1.5px solid rgba(31,95,214,0.18);border-bottom-width:4px;border-radius:16px;padding:12px 14px;cursor:pointer;box-shadow:0 10px 18px rgba(31,36,50,0.04)}
+.lv:hover{border-color:rgba(79,110,247,0.45);transform:translateY(-1px)}
 .lv:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
-.lv .n{font-family:var(--f-mono);font-weight:600;font-size:.8rem;color:var(--hl-ink);background:var(--hl);border-radius:8px;width:30px;height:30px;display:grid;place-items:center}
-.lv .t{font-family:var(--f-display);font-weight:800;font-size:1.25rem;line-height:1.1}
-.lv .s{display:block;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
-.lv .bar{width:64px;height:6px;border-radius:9px;background:var(--line);overflow:hidden}
-.lv .bar i{display:block;height:100%;background:var(--ok)}
+.lv .n{font-family:var(--f-mono);font-weight:700;font-size:.8rem;color:var(--sel);background:#f4f8ff;border-radius:9px;width:30px;height:30px;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4)}
+.lv .t{font-family:var(--f-display);font-weight:800;font-size:1.25rem;line-height:1.1;letter-spacing:-.04em}
+.lv .s{display:block;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.lv .bar{width:72px;height:7px;border-radius:999px;background:rgba(120,118,108,0.16);overflow:hidden;display:flex}
+.lv .bar i{display:block;height:100%;flex:none}
+.lv .bar i.w{background:var(--bad)}
+.lv .bar i.c{background:var(--ok)}
 .row2{display:flex;gap:10px;flex-wrap:wrap}
-.go.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
-.menu{position:absolute;z-index:6;background:var(--tile);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-.menu button{font:700 .95rem var(--f-body);color:var(--ink);background:transparent;border:0;border-radius:7px;padding:9px 14px;cursor:pointer;white-space:nowrap}
-.menu button:hover,.menu button:focus-visible{background:color-mix(in srgb,var(--sel) 12%,var(--tile));outline:none}
-.wordlist{display:grid;gap:2px;overflow:auto;min-height:0;flex:1;border-top:1px solid var(--line);padding-top:8px}
-.wordlist .row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:6px 2px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.menu{position:absolute;z-index:6;background:var(--tile);border:1px solid var(--line);border-radius:12px;padding:4px;box-shadow:0 16px 30px rgba(31,36,50,0.12)}
+.menu button{font:700 .95rem var(--f-body);color:var(--ink);background:transparent;border:0;border-radius:9px;padding:9px 14px;cursor:pointer;white-space:nowrap}
+.menu button:hover,.menu button:focus-visible{background:rgba(79,110,247,0.09);outline:none}
+.wordlist{display:grid;gap:2px;overflow:auto;min-height:0;flex:1;align-content:start;grid-auto-rows:max-content;border-top:1px solid var(--line);padding-top:8px}
+.wordlist .row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:7px 2px;border-bottom:1px solid rgba(120,118,108,0.2);border-radius:10px;padding-left:8px;padding-right:8px}
+.wordlist .row.unseen{background:transparent;color:var(--ink)}
+.wordlist .row.correct{background:var(--ok-bg);color:var(--ok)}
+.wordlist .row.wrong{background:var(--bad-bg);color:var(--bad)}
 .wordlist .row em{font-style:normal;color:var(--muted);text-align:right}
+.wordlist .row.correct em,.wordlist .row.wrong em{color:inherit;opacity:.9}
+.wordlist .row b{font-weight:700}
+.wordlist .row{grid-template-columns:auto 1fr auto;align-items:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.wordlist .row:hover{box-shadow:inset 0 0 0 1.5px rgba(79,110,247,0.35)}
+.wordlist .star{appearance:none;border:0;background:transparent;font-size:1.05rem;line-height:1;padding:2px 4px;cursor:pointer;color:var(--muted);opacity:.55}
+.wordlist .star:hover{opacity:1}
+.wordlist .row.fav .star{color:#e0a100;opacity:1}
+.wordlist .note{padding:16px 4px;color:var(--muted)}
+#studyEyebrow[data-msg]{font-size:0}
+#studyEyebrow[data-msg]::after{content:attr(data-msg);font-size:.72rem;color:var(--sel)}
+.go:disabled{opacity:.45;cursor:not-allowed}
+.pop-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.star{appearance:none;border:0;background:transparent;font-size:1.25rem;line-height:1;padding:2px 4px;cursor:pointer;color:inherit;opacity:.6}
+.star:hover{opacity:1}
+.star.on{color:#e0a100;opacity:1}
 #study{justify-content:flex-start}
-.lvname{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
-</style>
+.lvname{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);letter-spacing:.04em}</style>
 </head>
 <body>
 
@@ -131,6 +204,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-siz
     <div class="count" id="count">0/20</div>
   </div>
   <div class="caption" id="caption">先点一个词，再点另一列里和它等价的词</div>
+  <div class="board-actions"><button class="go ghost small" id="exitRoundBtn" type="button" hidden>退出</button></div>
   <div class="board">
     <div class="col" id="colL"></div>
     <div class="col" id="colR"></div>
@@ -142,12 +216,13 @@ body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-siz
     <div class="eyebrow">GRE 六选二 · 等价词</div>
     <h1>等价词<mark>速配</mark></h1>
     <ol class="rules">
-      <li>75 秒内配满 20 对就通关；第 6、13 对各奖励 8 秒，连对 3 次起每对加 1 秒，配错扣 3 秒。</li>
-      <li>每消掉两对，四个空位一起随机刷新。</li>
-      <li>每关按洗牌出词：整组词过完一遍才会重来，只有配错的词会提前回来。</li>
-      <li>右键（手机长按）看英文释义，计时不停。</li>
+      <li><b>配对</b><span>点左边一个词，再点右边同义的词。75 秒配满 20 对通关。</span></li>
+      <li><b>计时</b><span>第 6、13 对各 +8 秒，连对 3 次起每对 +1 秒，配错 −3 秒。</span></li>
+      <li><b>查词</b><span>右键（手机长按）单词看英文释义。</span></li>
+      <li><b>背单词</b><span>右键（手机长按）词组，先看整组词表：红 = 错过，绿 = 配对过，白 = 还没遇到。</span></li>
+      <li><b>收藏</b><span>点 ☆ 收藏一对词，词表、查词弹窗、结算页都能收藏；「收藏夹」可以单独配对。</span></li>
     </ol>
-    <div class="eyebrow">选一个词组 · 右键（手机长按）可以先背单词</div>
+    <div class="eyebrow">点词组开始 · 进度条：红 错过 · 绿 配对过</div>
     <div class="levels" id="levels"></div>
   </section>
 
@@ -180,11 +255,18 @@ body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-siz
 <script>
 const META = Array.from({ length: Math.max(1, ...GRE_SYNONYMS.map(x => x.group)) }, (_, i) => ({ name: `词组 ${i + 1}` }));
 const DEF = GRE_WORDS;
-const LEVELS = Array.from({ length: META.length }, (_, groupIndex) => {
-  const group = groupIndex + 1;
-  return GRE_SYNONYMS.filter(item => item.group === group).map((item, id) => ({ id, w: item.a, p: item.b, zh: item.zh }));
+const ALL_PAIRS = seededShuffle(GRE_SYNONYMS.map((item, index) => ({ index, w: item.a, p: item.b, zh: item.zh })));
+const LEVELS = Array.from({ length: META.length }, () => []);
+ALL_PAIRS.forEach((pair, order) => {
+  const groupIndex = order % LEVELS.length;
+  LEVELS[groupIndex].push({ id: LEVELS[groupIndex].length, w: pair.w, p: pair.p, zh: pair.zh });
 });
-// 所有关卡里互为等价的词，用来保证场上每个词只有一个合法搭档
+const GROUP_ORDER = Array.from({ length: LEVELS.length }, (_, i) => i);
+const FAV_KEY = 'gre-eq-fav-pairs-v1';
+const PAIR_STATE_KEY = 'gre-eq-pair-state-v1';
+try { localStorage.removeItem('gre-eq-word-state-v3'); } catch {}
+const FAVORITE_NAME = '收藏夹';
+
 const ADJ = {};
 const link = (a, b) => { (ADJ[a] ??= new Set()).add(b); (ADJ[b] ??= new Set()).add(a); };
 LEVELS.flat().forEach(P => link(P.w, P.p));
@@ -197,32 +279,117 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-const bagKey = n => `gre-eq-bag-v3-${n}`, missKey = n => `gre-eq-miss-v3-${n}`;
+const bagKey = n => `gre-eq-bag-v4-${n}`, missKey = n => `gre-eq-miss-v4-${n}`;
 
 let S = null, pressTimer = null, suppressClick = false;
 
+/* 固定种子的洗牌：顺序看起来是乱的，但每个人、每次刷新都一样 */
+function seededShuffle(a, seed = 20240130) {
+  let t = seed >>> 0;
+  const rand = () => { t = (t + 0x6D2B79F5) >>> 0; let r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; };
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-/* ---------- 选关 ---------- */
+/* 收藏按「词对」存：只收你亲手点过的那一对，不会因为共用单词把别的词对带进来 */
+const pairKey = (a, b) => `${a}|${b}`;
+try { ['gre-eq-favorites-v1', 'gre-eq-favorites-v2', 'gre-eq-favorites-v3'].forEach(k => localStorage.removeItem(k)); } catch {}
+function getFavoriteKeys() {
+  try {
+    const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    return new Set(Array.isArray(list) ? list.filter(k => typeof k === 'string' && k.includes('|')) : []);
+  } catch { return new Set(); }
+}
+function saveFavoriteKeys(set) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch {}
+}
+function isFavoritePair(a, b) { return getFavoriteKeys().has(pairKey(a, b)); }
+function toggleFavoritePair(a, b) {
+  const set = getFavoriteKeys(), k = pairKey(a, b);
+  const added = !set.has(k);
+  if (added) set.add(k); else set.delete(k);
+  saveFavoriteKeys(set);
+  return added;
+}
+function getFavoritePairs() {
+  const fav = getFavoriteKeys();
+  if (!fav.size) return [];
+  const seen = new Set();
+  return GRE_SYNONYMS.filter(item => {
+    const k = pairKey(item.a, item.b);
+    if (!fav.has(k) || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+/* 红绿按「词对」记：只有真正在配对里出现过的那一对才会变色 */
+function loadPairState() {
+  try { const m = JSON.parse(localStorage.getItem(PAIR_STATE_KEY) || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; }
+}
+function markPair(P, outcome) {
+  if (!P) return;
+  const map = loadPairState();
+  map[pairKey(P.w, P.p)] = outcome === 'wrong' ? 'wrong' : 'correct';
+  try { localStorage.setItem(PAIR_STATE_KEY, JSON.stringify(map)); } catch {}
+}
+function getPairStatus(P) {
+  return loadPairState()[pairKey(P.w, P.p)] || 'unseen';
+}
+function statusOrder(status) {
+  if (status === 'wrong') return 0;
+  if (status === 'correct') return 1;
+  return 2;
+}
+function pairSort(a, b) {
+  const diff = statusOrder(getPairStatus(a)) - statusOrder(getPairStatus(b));
+  return diff !== 0 ? diff : (a.id ?? 0) - (b.id ?? 0);
+}
+
+/* 进度条：红 = 错过，绿 = 配对过，空 = 没遇到；和「背单词」页的红绿判定完全一致 */
+function statusBar(pairs) {
+  const n = pairs.length;
+  let w = 0, c = 0;
+  pairs.forEach(P => { const st = getPairStatus(P); if (st === 'wrong') w++; else if (st === 'correct') c++; });
+  const pct = x => n ? (x / n * 100).toFixed(2) : 0;
+  return `<span class="bar" title="错 ${w} · 对 ${c} · 没遇到 ${n - w - c}"><i class="w" style="width:${pct(w)}%"></i><i class="c" style="width:${pct(c)}%"></i></span>`;
+}
 function renderLevels() {
   const box = $('levels'); box.innerHTML = '';
-  LEVELS.forEach((lv, n) => {
-    const bag = store.get(bagKey(n), null);
-    const done = bag ? lv.length - bag.length : 0;
+  const favPairs = getFavoritePairs();
+  const groupButtons = GROUP_ORDER.map(realIndex => {
+    const lv = LEVELS[realIndex];
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'lv'; b.id = `lv-${n}`;
-    b.innerHTML = `<span><span class="t">${META[n].name}</span><span class="s">${lv.length} 对 · 本轮已练 ${done}</span></span>
-      <span class="bar"><i style="width:${Math.round(done / lv.length * 100)}%"></i></span>`;
-    b.addEventListener('click', () => { if (lvSuppress) { lvSuppress = false; return; } hideMenu(); start(n); });
-    b.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(n, e.clientX, e.clientY); });
+    b.type = 'button'; b.className = 'lv'; b.id = `lv-${realIndex}`;
+    b.innerHTML = `<span><span class="t">${META[realIndex].name}</span><span class="s">${lv.length} 对</span></span>${statusBar(lv)}`;
+    b.addEventListener('click', () => { if (lvSuppress) { lvSuppress = false; return; } hideMenu(); start(realIndex); });
+    b.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(realIndex, e.clientX, e.clientY); });
     b.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse') return;
       clearTimeout(lvTimer);
-      lvTimer = setTimeout(() => { lvSuppress = true; showMenu(n, e.clientX, e.clientY); }, 450);
+      lvTimer = setTimeout(() => { lvSuppress = true; showMenu(realIndex, e.clientX, e.clientY); }, 450);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => clearTimeout(lvTimer)));
-    box.appendChild(b);
+    return b;
   });
+  groupButtons.forEach(btn => box.appendChild(btn));
+
+  const favBtn = document.createElement('button');
+  favBtn.type = 'button'; favBtn.className = 'lv'; favBtn.id = 'lv-favorites';
+  favBtn.innerHTML = `<span><span class="t">${FAVORITE_NAME}</span><span class="s">${favPairs.length} 对</span></span>${statusBar(favPairs.map(x => ({ w: x.a, p: x.b })))}`;
+  favBtn.addEventListener('click', () => {
+    if (lvSuppress) { lvSuppress = false; return; }
+    hideMenu();
+    if (favPairs.length) startFavorites(); else openFavoriteStudy();
+  });
+  favBtn.addEventListener('contextmenu', e => { e.preventDefault(); showMenu('favorites', e.clientX, e.clientY); });
+  favBtn.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    clearTimeout(lvTimer);
+    lvTimer = setTimeout(() => { lvSuppress = true; showMenu('favorites', e.clientX, e.clientY); }, 450);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => favBtn.addEventListener(ev, () => clearTimeout(lvTimer)));
+  box.appendChild(favBtn);
 }
 
 let lvTimer = null, lvSuppress = false, menuLevel = 0;
@@ -235,17 +402,82 @@ function showMenu(n, x, y) {
   $('lvStudy').focus({ preventScroll: true });
 }
 function hideMenu() { $('lvmenu').hidden = true; }
+let studyMode = null;   // 当前背单词页：词组序号，或 'favorites'
+function rowHTML(P, state) {
+  const fav = isFavoritePair(P.w, P.p);
+  return `<div class="row ${state}${fav ? ' fav' : ''}" data-w="${P.w}" data-p="${P.p}">
+    <button type="button" class="star" aria-label="${fav ? '移出收藏夹' : '加入收藏夹'}" aria-pressed="${fav}">${fav ? '★' : '☆'}</button>
+    <span><b>${P.w}</b> = <b>${P.p}</b></span><em>${P.zh}</em></div>`;
+}
+function bindRows() {
+  const starOnly = studyMode === 'favorites';
+  $('wordlist').querySelectorAll('.row[data-w]').forEach(row => {
+    let t = null, longPressed = false;
+    const toggle = () => {
+      const added = toggleFavoritePair(row.dataset.w, row.dataset.p);
+      flashStudy(added ? '已加入收藏夹' : '已移出收藏夹');
+      refreshStudy();
+    };
+    row.querySelector('.star').addEventListener('click', e => e.stopPropagation());
+    if (starOnly) { row.querySelector('.star').addEventListener('click', toggle); return; }
+    row.addEventListener('contextmenu', e => { e.preventDefault(); toggle(); });
+    row.querySelector('.star').addEventListener('click', e => {
+      e.stopPropagation();
+      if (longPressed) { longPressed = false; return; }
+      toggle();
+    });
+    row.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      clearTimeout(t);
+      t = setTimeout(() => { longPressed = true; toggle(); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => row.addEventListener(ev, () => clearTimeout(t)));
+  });
+}
+function flashStudy(msg) {
+  const el = $('studyEyebrow');
+  el.dataset.msg = msg;
+  clearTimeout(flashStudy.t);
+  flashStudy.t = setTimeout(() => { delete el.dataset.msg; }, 1200);
+}
+function refreshStudy() {
+  const top = $('wordlist').scrollTop;
+  if (studyMode === 'favorites') openFavoriteStudy(); else openStudy(studyMode);
+  $('wordlist').scrollTop = top;
+}
 function openStudy(n) {
   hideMenu();
+  studyMode = n;
   const lv = LEVELS[n];
-  $('studyEyebrow').textContent = `${lv.length} 对`;
+  const rows = [...lv].sort(pairSort);
+  const favCount = lv.filter(P => isFavoritePair(P.w, P.p)).length;
+  $('studyEyebrow').textContent = `${lv.length} 对 · 已收藏 ${favCount} · 右键（手机长按）或点 ☆ 加入收藏夹`;
   $('studyTitle').textContent = META[n].name;
-  $('wordlist').innerHTML = lv.map(P => `<div class="row"><span><b>${P.w}</b> = <b>${P.p}</b></span><em>${P.zh}</em></div>`).join('');
+  $('wordlist').innerHTML = rows.map(P => rowHTML(P, getPairStatus(P))).join('');
+  bindRows();
   $('wordlist').scrollTop = 0;
+  $('studyGo').textContent = '开始这组';
+  $('studyGo').disabled = false;
   $('studyGo').onclick = () => start(n);
   $('start').hidden = true; $('study').hidden = false;
 }
-$('lvStudy').addEventListener('click', () => openStudy(menuLevel));
+function openFavoriteStudy() {
+  hideMenu();
+  studyMode = 'favorites';
+  const rows = getFavoritePairs().map((item, id) => ({ id, w: item.a, p: item.b, zh: item.zh })).sort(pairSort);
+  $('studyEyebrow').textContent = `${rows.length} 对 · 点 ★ 移出收藏夹`;
+  $('studyTitle').textContent = FAVORITE_NAME;
+  $('wordlist').innerHTML = rows.length
+    ? rows.map(P => rowHTML(P, getPairStatus(P))).join('')
+    : '<div class="note">收藏夹还是空的。在词组的「背单词」页里右键一个词对，就能加进来。</div>';
+  bindRows();
+  $('wordlist').scrollTop = 0;
+  $('studyGo').textContent = '开始配对';
+  $('studyGo').disabled = rows.length === 0;
+  $('studyGo').onclick = () => startFavorites();
+  $('start').hidden = true; $('study').hidden = false;
+}
+$('lvStudy').addEventListener('click', () => { if (menuLevel === 'favorites') openFavoriteStudy(); else openStudy(menuLevel); });
 $('studyBack').addEventListener('click', () => { $('study').hidden = true; renderLevels(); $('start').hidden = false; });
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#lvmenu')) hideMenu(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideMenu(); });
@@ -284,7 +516,8 @@ function showDef(side, i, el) {
   const pop = $('pop');
   const entry = DEF[word] || {};
   const def = typeof entry === 'string' ? entry : (entry.def || '暂无释义');
-  pop.innerHTML = `<b>${word}</b>${def}`;
+  const isFavorite = isFavoritePair(P.w, P.p);
+  pop.innerHTML = `<b>${word}</b>${def}<div class="pop-actions"><button type="button" class="star${isFavorite ? ' on' : ''}" aria-label="${isFavorite ? '移出收藏夹' : '加入收藏夹'}" aria-pressed="${isFavorite}">${isFavorite ? '★' : '☆'}</button></div>`;
   pop.hidden = false;
   const app = document.querySelector('.app').getBoundingClientRect(), t = el.getBoundingClientRect();
   const w = pop.offsetWidth;
@@ -292,9 +525,15 @@ function showDef(side, i, el) {
   let top = t.bottom - app.top + 6;
   if (top + pop.offsetHeight > app.height) top = t.top - app.top - pop.offsetHeight - 6;
   pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  pop.querySelector('button').addEventListener('click', e => {
+    e.stopPropagation();
+    const added = toggleFavoritePair(P.w, P.p);
+    flash(added ? '已收藏' : '已移出', 'var(--sel)');
+    showDef(side, i, el);
+  });
 }
 function hidePop() { $('pop').hidden = true; }
-document.addEventListener('pointerdown', e => { if (!e.target.closest('.tile')) hidePop(); });
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.tile') && !e.target.closest('#pop')) hidePop(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hidePop(); });
 
 /* ---------- 出词：洗牌 + 错题回流 + 同屏唯一答案 ---------- */
@@ -326,6 +565,46 @@ function pickNext() {
   return any ? any.id : null;
 }
 
+function startFavorites() {
+  const pairList = getFavoritePairs();
+  if (!pairList.length) {
+    renderLevels();
+    return;
+  }
+  const pool = pairList.map((pair, id) => ({ id, w: pair.a, p: pair.b, zh: pair.zh }));
+  const bag = shuffle(pool.map(P => P.id));
+  const queue = [];
+  S = {
+    level: 'favorites', pool, bag, queue,
+    L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
+    sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
+    matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
+    missed: new Map(), stopsHit: new Set(), timer: null,
+    favoriteMode: true
+  };
+  const ids = [];
+  for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
+  S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
+  document.querySelectorAll('.stop').forEach(s => s.classList.remove('hit'));
+  $('lvname').textContent = FAVORITE_NAME;
+  $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
+  $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
+  $('exitRoundBtn').hidden = false;
+  S.running = true; S.last = Date.now();
+  S.timer = setInterval(tick, 100);
+  render();
+  tilesL[0].focus({ preventScroll: true });
+}
+
+function exitRound() {
+  if (S && S.timer) clearInterval(S.timer);
+  S = null; hidePop();
+  $('exitRoundBtn').hidden = true;
+  $('end').hidden = true; $('study').hidden = true; $('start').hidden = false;
+  renderLevels();
+}
+$('exitRoundBtn').addEventListener('click', exitRound);
+
 /* ---------- 一局 ---------- */
 function start(level) {
   if (S && S.timer) clearInterval(S.timer);
@@ -338,7 +617,7 @@ function start(level) {
     L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
     sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
     matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
-    missed: new Map(), stopsHit: new Set(), timer: null
+    missed: new Map(), stopsHit: new Set(), timer: null, favoriteMode: false
   };
   const ids = [];
   for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
@@ -347,6 +626,7 @@ function start(level) {
   $('caption').textContent = '先点一个词，再点另一列里和它等价的词';
   $('lvname').textContent = META[level].name;
   $('start').hidden = true; $('end').hidden = true; $('study').hidden = true; hideMenu();
+  $('exitRoundBtn').hidden = false;
   S.running = true; S.last = Date.now();
   S.timer = setInterval(tick, 100);
   render();
@@ -398,8 +678,10 @@ function flash(text, color) {
 }
 
 function correct(l, r) {
-  const P = S.pool[S.L[l]];
+  const pair = S.pool[S.L[l]];
   S.matches++; S.combo++;
+  (S.matchedIds ??= new Set()).add(S.L[l]);
+  markPair(pair, 'correct');
   let bonus = S.combo >= 3 ? 1000 : 0;
   STOPS.forEach(n => {
     if (S.matches === n && !S.stopsHit.has(n)) {
@@ -408,7 +690,7 @@ function correct(l, r) {
     }
   });
   if (bonus) { S.timeLeft += bonus; flash(`+${bonus / 1000}秒`, 'var(--ok)'); }
-  $('caption').innerHTML = `<b>${P.w}</b> = <b>${P.p}</b> · ${P.zh}` + (S.combo >= 3 ? `<span class="combo">连对 ${S.combo}</span>` : '');
+  $('caption').innerHTML = `<b>${pair.w}</b> = <b>${pair.p}</b> · ${pair.zh}` + (S.combo >= 3 ? `<span class="combo">连对 ${S.combo}</span>` : '');
   const kl = 'L' + l, kr = 'R' + r;
   S.lock.add(kl); S.lock.add(kr);
   tilesL[l].className = 'tile ok'; tilesR[r].className = 'tile ok';
@@ -430,7 +712,6 @@ function correct(l, r) {
 }
 
 function refill() {
-  // 两对新词随机落进四个空位：可能同排，也可能交叉
   const ls = shuffle(S.emptyL.splice(0, 2)), rs = shuffle(S.emptyR.splice(0, 2));
   for (let k = 0; k < 2; k++) {
     const id = pickNext();
@@ -441,7 +722,9 @@ function refill() {
 }
 
 function wrong(l, r) {
+  const left = S.pool[S.L[l]], right = S.pool[S.R[r]];
   S.combo = 0; S.errors++;
+  markPair(left, 'wrong'); markPair(right, 'wrong');
   S.timeLeft = Math.max(0, S.timeLeft - PENALTY_MS);
   flash(`-${PENALTY_MS / 1000}秒`, 'var(--bad)');
   [S.L[l], S.R[r]].forEach(id => {
@@ -457,30 +740,42 @@ function wrong(l, r) {
 }
 
 function finish(won) {
-  if (!S.running) return;
+  if (!S || !S.running) return;
   S.running = false; clearInterval(S.timer); hidePop();
   const missedIds = [...S.missed.keys()];
   const prev = store.get(missKey(S.level), []);
   store.set(missKey(S.level), [...new Set(missedIds.concat(prev))].slice(0, 40));
-  store.set(bagKey(S.level), S.bag);
-
-  $('endEyebrow').textContent = `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
+  if (!S.favoriteMode) store.set(bagKey(S.level), S.bag);
+  $('endEyebrow').textContent = S.favoriteMode ? `${FAVORITE_NAME} · ${won ? '走完全程' : '时间到'}` : `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
   $('endTitle').textContent = won ? '通关' : `配了 ${S.matches} 对`;
-  const done = S.pool.length - S.bag.length;
   $('stats').innerHTML =
     `<div><span>配对</span><b>${S.matches}/${TARGET}</b></div>` +
-    `<div><span>配错</span><b>${S.errors}</b></div>` +
-    `<div><span>本轮已练</span><b>${done}/${S.pool.length}</b></div>`;
-  $('missed').innerHTML = missedIds.length
-    ? '<div class="eyebrow">这局配错过的词，下局会更早出现</div>' +
-      missedIds.map(id => { const P = S.pool[id]; return `<div class="row"><span><b>${P.w}</b> = <b>${P.p}</b></span><em>${P.zh}</em></div>`; }).join('')
-    : '<div class="note">这局一次都没配错。</div>';
+    `<div><span>配错</span><b>${S.errors}</b></div>`;
+  const okIds = [...(S.matchedIds || [])].filter(id => !S.missed.has(id));
+  const endRow = (id, cls) => {
+    const P = S.pool[id], fav = isFavoritePair(P.w, P.p);
+    return `<div class="row ${cls}" data-w="${P.w}" data-p="${P.p}"><button type="button" class="star${fav ? ' on' : ''}" aria-label="${fav ? '移出收藏夹' : '加入收藏夹'}" aria-pressed="${fav}">${fav ? '★' : '☆'}</button><span><b>${P.w}</b> = <b>${P.p}</b></span><em>${P.zh}</em></div>`;
+  };
+  $('missed').innerHTML =
+    (missedIds.length ? '<div class="eyebrow">配错过的词 · 下局会更早出现</div>' + missedIds.map(id => endRow(id, 'wrong')).join('') : '') +
+    (okIds.length ? '<div class="eyebrow">配对成功的词</div>' + okIds.map(id => endRow(id, 'correct')).join('') : '');
+  $('missed').querySelectorAll('.row').forEach(row => {
+    const star = row.querySelector('.star');
+    star.addEventListener('click', () => {
+      const on = toggleFavoritePair(row.dataset.w, row.dataset.p);
+      star.classList.toggle('on', on); star.textContent = on ? '★' : '☆';
+      star.setAttribute('aria-pressed', on); star.setAttribute('aria-label', on ? '移出收藏夹' : '加入收藏夹');
+    });
+  });
   $('end').hidden = false;
   $('againBtn').focus({ preventScroll: true });
 }
 
-$('againBtn').addEventListener('click', () => start(S.level));
-$('menuBtn').addEventListener('click', () => { $('end').hidden = true; renderLevels(); $('start').hidden = false; });
+$('againBtn').addEventListener('click', () => {
+  if (S && S.favoriteMode) startFavorites();
+  else if (S) start(S.level);
+});
+$('menuBtn').addEventListener('click', () => { $('end').hidden = true; $('exitRoundBtn').hidden = true; renderLevels(); $('start').hidden = false; });
 renderLevels();
 </script>
 
