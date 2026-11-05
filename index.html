@@ -10,7 +10,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <script>try{var t=localStorage.getItem("gre-eq-theme-v1");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;600;700;800&family=Manrope:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;700;800&display=swap">
 <style>
 /* Layout: one-screen game — status strip (timer · progress with reward stops) above two equal columns of word tiles. Study-desk ink blue with a highlighter accent. */
 :root{
@@ -168,7 +168,6 @@ body{
   display:flex;align-items:center;gap:14px;
   background:var(--panel);border:1px solid var(--status-line);
   border-radius:18px;padding:12px 14px;box-shadow:0 10px 30px var(--shadow);
-  backdrop-filter:blur(8px);
 }
 .clock{font-family:var(--f-mono);font-weight:700;font-size:1.45rem;font-variant-numeric:tabular-nums;min-width:3.8ch;text-align:right;position:relative;color:var(--ink)}
 .clock.low{color:var(--bad)}
@@ -219,7 +218,7 @@ body{
 .sheet{
   position:absolute;inset:58px 0 0 0;display:flex;flex-direction:column;justify-content:center;gap:18px;
   background:var(--sheet-bg);border:1px solid var(--line);
-  backdrop-filter:blur(12px);padding:22px 18px 24px;border-radius:24px;overflow:auto;justify-content:safe center
+  padding:22px 18px 24px;border-radius:24px;overflow:auto;justify-content:safe center
 }
 .sheet h1{font-family:var(--f-display);font-weight:800;font-size:clamp(2.7rem,9vw,4rem);line-height:.94;margin:0;text-wrap:balance;letter-spacing:-.06em}
 .sheet h1 mark{background:linear-gradient(180deg, transparent 58%, var(--mark) 58%);color:inherit;padding:0 .12em}
@@ -295,6 +294,21 @@ body{
 .theme-toggle[aria-checked="true"] .knob{transform:translateX(30px)}
 .theme-toggle:focus-visible{outline:3px solid var(--sel);outline-offset:3px}
 @media (prefers-reduced-motion: reduce){.theme-toggle,.theme-toggle .knob{transition:none}}
+/* rank badge + reset */
+.rank{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;width:100%;background:var(--lv-bg);border:1.5px solid var(--lv-border);border-radius:16px;padding:12px 14px;text-align:left}
+.rank .ico{grid-row:span 2;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:var(--lv-n-bg);border:2px solid var(--star-on)}
+.rank .ico svg{display:block;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-2px) rotate(-3deg)}}
+@media (prefers-reduced-motion: reduce){.rank .ico svg{animation:none}}
+.rank .nm{font-family:var(--f-display);font-weight:800;font-size:1.2rem;letter-spacing:-.02em;line-height:1.1}
+.rank .sub{font-family:var(--f-mono);font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.rank .meter{grid-column:1/-1;height:6px;border-radius:999px;background:var(--bar-bg);overflow:hidden}
+.rank .meter i{display:block;height:100%;background:var(--star-on);border-radius:999px}
+.rank.up{animation:popin .4s ease-out}
+.endrank{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:.85rem;color:var(--sel)}
+.go.danger{color:var(--bad);border-color:var(--bad-border)}
+.go.danger.armed{background:var(--bad);color:#fff;border-color:transparent}
+#start .row2{justify-content:center}
 </style>
 </head>
 <body>
@@ -333,8 +347,10 @@ body{
       <li><b>背单词</b><span>右键（手机长按）词组，先看整组词表：红 = 错过，绿 = 配对过，白 = 还没遇到。</span></li>
       <li><b>收藏</b><span>点 ☆ 收藏一对词，词表、查词弹窗、结算页都能收藏；「收藏夹」可以单独配对。</span></li>
     </ol>
+    <div class="rank" id="rank"></div>
     <div class="eyebrow">点词组开始 · 进度条：红 错过 · 绿 配对过</div>
     <div class="levels" id="levels"></div>
+    <div class="row2"><button class="go ghost small danger" id="resetBtn" type="button">重置全部进度</button></div>
   </section>
 
   <section class="sheet" id="study" hidden>
@@ -353,6 +369,7 @@ body{
     <div class="eyebrow" id="endEyebrow"></div>
     <h2 id="endTitle"></h2>
     <div class="stats" id="stats"></div>
+    <div class="endrank" id="endRank"></div>
     <div class="missed" id="missed"></div>
     <div class="row2">
       <button class="go" id="againBtn" type="button">再来一局</button>
@@ -406,13 +423,19 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.fl
 /* 收藏按「词对」存：只收你亲手点过的那一对，不会因为共用单词把别的词对带进来 */
 const pairKey = (a, b) => `${a}|${b}`;
 try { ['gre-eq-favorites-v1', 'gre-eq-favorites-v2', 'gre-eq-favorites-v3'].forEach(k => localStorage.removeItem(k)); } catch {}
+/* 内存缓存：启动时只从 localStorage 读一次，之后读写都走内存（避免每次都 JSON.parse 整张表） */
+let FAV_SET = null, PAIR_MAP = null, STATS = null;
 function getFavoriteKeys() {
-  try {
-    const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
-    return new Set(Array.isArray(list) ? list.filter(k => typeof k === 'string' && k.includes('|')) : []);
-  } catch { return new Set(); }
+  if (!FAV_SET) {
+    try {
+      const list = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+      FAV_SET = new Set(Array.isArray(list) ? list.filter(k => typeof k === 'string' && k.includes('|')) : []);
+    } catch { FAV_SET = new Set(); }
+  }
+  return FAV_SET;
 }
 function saveFavoriteKeys(set) {
+  FAV_SET = set;
   try { localStorage.setItem(FAV_KEY, JSON.stringify([...set])); } catch {}
 }
 function isFavoritePair(a, b) { return getFavoriteKeys().has(pairKey(a, b)); }
@@ -436,13 +459,75 @@ function getFavoritePairs() {
 }
 /* 红绿按「词对」记：只有真正在配对里出现过的那一对才会变色 */
 function loadPairState() {
-  try { const m = JSON.parse(localStorage.getItem(PAIR_STATE_KEY) || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; }
+  if (!PAIR_MAP) {
+    try { const m = JSON.parse(localStorage.getItem(PAIR_STATE_KEY) || '{}'); PAIR_MAP = m && typeof m === 'object' ? m : {}; } catch { PAIR_MAP = {}; }
+  }
+  return PAIR_MAP;
 }
 function markPair(P, outcome) {
   if (!P) return;
-  const map = loadPairState();
-  map[pairKey(P.w, P.p)] = outcome === 'wrong' ? 'wrong' : 'correct';
-  try { localStorage.setItem(PAIR_STATE_KEY, JSON.stringify(map)); } catch {}
+  loadPairState()[pairKey(P.w, P.p)] = outcome === 'wrong' ? 'wrong' : 'correct';
+  schedulePairSave();
+}
+/* 合并同一时刻的多次写入（配错一次会连标两对），落盘一次 */
+let pairSaveTimer = null;
+function flushPairSave() {
+  clearTimeout(pairSaveTimer); pairSaveTimer = null;
+  if (PAIR_MAP) try { localStorage.setItem(PAIR_STATE_KEY, JSON.stringify(PAIR_MAP)); } catch {}
+}
+function schedulePairSave() { if (pairSaveTimer === null) pairSaveTimer = setTimeout(flushPairSave, 300); }
+addEventListener('pagehide', () => { if (pairSaveTimer !== null) flushPairSave(); });
+
+/* ---------- 段位徽章：按累计配对正确数升级 ---------- */
+const STATS_KEY = 'gre-eq-stats-v1';
+const RANKS = [
+  { name: '等价词菜鸟', min: 0 },
+  { name: '等价词新手', min: 30 },
+  { name: '等价词学徒', min: 100 },
+  { name: '等价词大师', min: 300 },
+  { name: '等价词长老', min: 700 },
+  { name: '等价词国王', min: 1500 }
+];
+/* 六个迷你角色（内联 SVG，固定配色，深浅色主题下都清楚）：蛋壳小鸡 → 嫩芽 → 捧书学徒 → 学士帽 → 白胡子长老 → 小国王 */
+const OL = '#23406e';
+const faceSVG = (dy = 0, mouth = true) => `<g transform="translate(0 ${dy})"><circle cx="25" cy="38" r="2.7" fill="${OL}"/><circle cx="39" cy="38" r="2.7" fill="${OL}"/><circle cx="26" cy="37" r=".9" fill="#fff"/><circle cx="40" cy="37" r=".9" fill="#fff"/><ellipse cx="19" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/><ellipse cx="45" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/>${mouth ? `<path d="M28.5 43q3.5 3.5 7 0" stroke="${OL}" stroke-width="1.8" fill="none" stroke-linecap="round"/>` : ''}</g>`;
+const BODY = (fill, cy = 38) => `<circle cx="32" cy="${cy}" r="20" fill="${fill}" stroke="${OL}" stroke-width="2"/>`;
+const CHARS = [
+  /* 菜鸟：刚破壳的小鸡 */
+  `${BODY('#ffe27a', 34)}<path d="M32 15q-5-6-9-3 5 0 7 5zM32 15q4-8 9-5-5 1-6 6z" fill="#ffe27a" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/>${faceSVG(-6, false)}<path d="M29.5 35.5l2.5 3 2.5-3z" fill="#ff9d3c" stroke="${OL}" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 42l6-4 6 6 9-6 9 6 6-6 6 4q1 16-21 16T11 42z" fill="#fff" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/>`,
+  /* 新手：头顶冒出嫩芽 */
+  `<path d="M32 18v-7" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/><path d="M32 12q-2-9-12-8 1 9 12 8zM32 12q2-9 12-8-1 9-12 8z" fill="#5fd18b" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/>${BODY('#a8ecc0')}${faceSVG()}`,
+  /* 学徒：红头带 + 捧着一本书 */
+  `${BODY('#9cc8ff')}<path d="M13 28q19-9 38 0v6q-19-8-38 0z" fill="#ff6b7d" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 31l8-4-2 9z" fill="#ff6b7d" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/>${faceSVG(2)}<rect x="19" y="50" width="26" height="12" rx="2.5" fill="#ffab6b" stroke="${OL}" stroke-width="2"/><path d="M32 50v12" stroke="${OL}" stroke-width="1.8"/><circle cx="17" cy="54" r="3.5" fill="#9cc8ff" stroke="${OL}" stroke-width="1.8"/><circle cx="47" cy="54" r="3.5" fill="#9cc8ff" stroke="${OL}" stroke-width="1.8"/>`,
+  /* 大师：学士帽 + 金色流苏 */
+  `${BODY('#cdbcff', 40)}${faceSVG(2)}<path d="M20 25v8q12 7 24 0v-8z" fill="#34548a" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 20l26-11 26 11-26 11z" fill="#3d63a3" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M54 21v13" stroke="#ffc21a" stroke-width="2.2" stroke-linecap="round"/><circle cx="54" cy="36" r="3" fill="#ffc21a" stroke="${OL}" stroke-width="1.5"/>`,
+  /* 长老：白眉毛、白鬓角、长白胡子 */
+  `<circle cx="13" cy="33" r="6" fill="#fff" stroke="${OL}" stroke-width="1.8"/><circle cx="51" cy="33" r="6" fill="#fff" stroke="${OL}" stroke-width="1.8"/>${BODY('#ffdcc2', 36)}<ellipse cx="25" cy="35" rx="2.5" ry="2.7" fill="${OL}"/><ellipse cx="39" cy="35" rx="2.5" ry="2.7" fill="${OL}"/><circle cx="26" cy="34" r=".9" fill="#fff"/><circle cx="40" cy="34" r=".9" fill="#fff"/><path d="M19 30q5-5 10-1M35 29q5-4 10 1" stroke="${OL}" stroke-width="2.2" fill="#fff" stroke-linecap="round"/><path d="M14 42q2 20 18 20t18-20q-9 7-18 3-9 4-18-3z" fill="#fff" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M27 46q5 3 10 0" stroke="${OL}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`,
+  /* 国王：红披风 + 金王冠 */
+  `<path d="M8 60Q4 36 18 30h28q14 6 10 30z" fill="#e8546a" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/>${BODY('#fff0c2', 40)}${faceSVG(2)}<path d="M19 26l2-16 8 8 3-10 3 10 8-8 2 16z" fill="#ffc21a" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><circle cx="21" cy="9" r="2.2" fill="#e8546a" stroke="${OL}" stroke-width="1.2"/><circle cx="32" cy="6" r="2.2" fill="#5fb8ff" stroke="${OL}" stroke-width="1.2"/><circle cx="43" cy="9" r="2.2" fill="#e8546a" stroke="${OL}" stroke-width="1.2"/>`
+];
+const badgeSVG = (i, px = 56) => `<svg viewBox="0 0 64 64" width="${px}" height="${px}" role="img" aria-label="${RANKS[i].name}">${CHARS[i]}</svg>`;
+function getStats() {
+  if (!STATS) {
+    try { const s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}'); STATS = { correct: Math.max(0, Number(s && s.correct) || 0) }; } catch { STATS = { correct: 0 }; }
+  }
+  return STATS;
+}
+function rankIndex(n) { let r = 0; RANKS.forEach((x, i) => { if (n >= x.min) r = i; }); return r; }
+function addCorrect() {
+  const s = getStats(), before = rankIndex(s.correct);
+  s.correct++;
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch {}
+  const after = rankIndex(s.correct);
+  return after > before ? after : -1;   // 升级了就返回新段位序号
+}
+function renderRank(up) {
+  const n = getStats().correct, i = rankIndex(n), cur = RANKS[i], nx = RANKS[i + 1];
+  const el = $('rank');
+  el.innerHTML = `<span class="ico">${badgeSVG(i, 60)}</span><span class="nm">${cur.name}</span>` +
+    `<span class="sub">${nx ? `累计配对 ${n} · 距「${nx.name}」还差 ${nx.min - n}` : `累计配对 ${n} · 已是最高段位`}</span>` +
+    `<span class="meter"><i style="width:${nx ? ((n - cur.min) / (nx.min - cur.min) * 100).toFixed(1) : 100}%"></i></span>`;
+  el.classList.remove('up'); if (up) { void el.offsetWidth; el.classList.add('up'); }
 }
 function getPairStatus(P) {
   return loadPairState()[pairKey(P.w, P.p)] || 'unseen';
@@ -466,6 +551,7 @@ function statusBar(pairs) {
   return `<span class="bar" title="错 ${w} · 对 ${c} · 没遇到 ${n - w - c}"><i class="w" style="width:${pct(w)}%"></i><i class="c" style="width:${pct(c)}%"></i></span>`;
 }
 function renderLevels() {
+  renderRank();
   const box = $('levels'); box.innerHTML = '';
   const favPairs = getFavoritePairs();
   const groupButtons = GROUP_ORDER.map(realIndex => {
@@ -750,8 +836,12 @@ function tick() {
   if (S.timeLeft <= 0) { S.timeLeft = 0; finish(false); }
   renderClock();
 }
+let shownSec = -1;
 function renderClock() {
-  const sec = Math.ceil(S.timeLeft / 1000), c = $('clock');
+  const sec = Math.ceil(S.timeLeft / 1000);
+  if (sec === shownSec) return;   // 秒数没变就不碰 DOM
+  shownSec = sec;
+  const c = $('clock');
   c.firstChild.nodeValue = sec;
   c.classList.toggle('low', sec <= 10);
 }
@@ -793,6 +883,8 @@ function correct(l, r) {
   S.matches++; S.combo++;
   (S.matchedIds ??= new Set()).add(S.L[l]);
   markPair(pair, 'correct');
+  const rankUp = addCorrect();
+  if (rankUp >= 0) (S.rankUps ??= []).push(rankUp);
   let bonus = S.combo >= 3 ? 1000 : 0;
   STOPS.forEach(n => {
     if (S.matches === n && !S.stopsHit.has(n)) {
@@ -801,7 +893,8 @@ function correct(l, r) {
     }
   });
   if (bonus) { S.timeLeft += bonus; flash(`+${bonus / 1000}秒`, 'var(--ok)'); }
-  $('caption').innerHTML = `<b>${pair.w}</b> = <b>${pair.p}</b> · ${pair.zh}` + (S.combo >= 3 ? `<span class="combo">连对 ${S.combo}</span>` : '');
+  $('caption').innerHTML = `<b>${pair.w}</b> = <b>${pair.p}</b> · ${pair.zh}` + (S.combo >= 3 ? `<span class="combo">连对 ${S.combo}</span>` : '') +
+    (rankUp >= 0 ? `<span class="combo">升级！${RANKS[rankUp].name}</span>` : '');
   const kl = 'L' + l, kr = 'R' + r;
   S.lock.add(kl); S.lock.add(kr);
   tilesL[l].className = 'tile ok'; tilesR[r].className = 'tile ok';
@@ -862,6 +955,9 @@ function finish(won) {
   $('stats').innerHTML =
     `<div><span>配对</span><b>${S.matches}/${TARGET}</b></div>` +
     `<div><span>配错</span><b>${S.errors}</b></div>`;
+  const ri = rankIndex(getStats().correct);
+  $('endRank').innerHTML = `${badgeSVG(ri, 36)}<span>${RANKS[ri].name} · 累计配对 ${getStats().correct}` +
+    (S.rankUps && S.rankUps.length ? ` · 本局升级为 ${RANKS[S.rankUps[S.rankUps.length - 1]].name}！` : '') + '</span>';
   const okIds = [...(S.matchedIds || [])].filter(id => !S.missed.has(id));
   const endRow = (id, cls) => {
     const P = S.pool[id], fav = isFavoritePair(P.w, P.p);
@@ -889,12 +985,40 @@ $('againBtn').addEventListener('click', () => {
 $('menuBtn').addEventListener('click', () => { $('end').hidden = true; $('exitRoundBtn').hidden = true; renderLevels(); $('start').hidden = false; });
 renderLevels();
 
+/* 重置：清掉所有 gre-eq- 开头的存档（含主题）。页内两步确认，因为 confirm() 在某些环境里会被屏蔽 */
+(function () {
+  const btn = $('resetBtn'); let armTimer = null;
+  const disarm = () => { clearTimeout(armTimer); btn.classList.remove('armed'); btn.textContent = '重置全部进度'; };
+  btn.addEventListener('click', () => {
+    if (!btn.classList.contains('armed')) {
+      btn.classList.add('armed'); btn.textContent = '再点一次：清空所有进度、收藏和主题';
+      armTimer = setTimeout(disarm, 4000); return;
+    }
+    disarm();
+    if (S && S.timer) clearInterval(S.timer);
+    S = null;
+    clearTimeout(pairSaveTimer); pairSaveTimer = null;
+    FAV_SET = null; PAIR_MAP = null; STATS = null;
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('gre-eq-')) keys.push(k); }
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch {}
+    delete document.documentElement.dataset.theme;
+    window.syncTheme && window.syncTheme();
+    hidePop(); hideMenu();
+    $('exitRoundBtn').hidden = true; $('end').hidden = true; $('study').hidden = true; $('start').hidden = false;
+    renderLevels();
+  });
+})();
+
 /* 浅色 / 深色切换：没手动选过就跟随系统，选过就记住 */
 (function () {
   const root = document.documentElement, btn = $('themeToggle');
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : mq.matches;
   const sync = () => btn.setAttribute('aria-checked', String(isDark()));
+  window.syncTheme = sync;
   btn.addEventListener('click', () => {
     const next = isDark() ? 'light' : 'dark';
     root.dataset.theme = next;
