@@ -89,8 +89,9 @@
   --tile-border:rgba(110,170,245,0.75);
   --shadow-sm:rgba(0,0,0,0.28); --shadow-md:rgba(0,0,0,0.38); --shadow-lg:rgba(0,0,0,0.45);
   --pop-bg:linear-gradient(180deg,#2a5082,#21436f); --pop-ink:#f4f8ff;
-  --sel-bg:linear-gradient(180deg,rgba(127,176,255,0.3),#17314f);
-  --sel-ring:rgba(127,176,255,0.3);
+  --sel-bg:linear-gradient(180deg,#b4d3ff,#7fb0ff);
+  --sel-ring:rgba(127,176,255,0.55);
+  --sel-ink:#0b1a30; --sel-edge:#e3eefc;
   --ok-border:rgba(60,196,176,0.85);
   --ok-tile-bg:linear-gradient(180deg,rgba(60,196,176,0.26),#17314f);
   --bad-border:rgba(242,102,124,0.85);
@@ -122,8 +123,9 @@
   --tile-border:rgba(110,170,245,0.75);
   --shadow-sm:rgba(0,0,0,0.28); --shadow-md:rgba(0,0,0,0.38); --shadow-lg:rgba(0,0,0,0.45);
   --pop-bg:linear-gradient(180deg,#2a5082,#21436f); --pop-ink:#f4f8ff;
-  --sel-bg:linear-gradient(180deg,rgba(127,176,255,0.3),#17314f);
-  --sel-ring:rgba(127,176,255,0.3);
+  --sel-bg:linear-gradient(180deg,#b4d3ff,#7fb0ff);
+  --sel-ring:rgba(127,176,255,0.55);
+  --sel-ink:#0b1a30; --sel-edge:#e3eefc;
   --ok-border:rgba(60,196,176,0.85);
   --ok-tile-bg:linear-gradient(180deg,rgba(60,196,176,0.26),#17314f);
   --bad-border:rgba(242,102,124,0.85);
@@ -209,7 +211,7 @@ body{
 .pop b{display:block;font-family:var(--f-display);font-size:1.05rem;margin-bottom:2px}
 .tile:active{transform:translateY(2px)}
 .tile:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
-.tile.sel{border-color:var(--sel);background:var(--sel-bg);box-shadow:0 0 0 3px var(--sel-ring)}
+.tile.sel{border-color:var(--sel-edge, var(--sel));background:var(--sel-bg);color:var(--sel-ink, inherit);box-shadow:0 0 0 3px var(--sel-ring),0 12px 22px var(--shadow-md);transform:translateY(-2px)}
 .tile.ok{border-color:var(--ok-border);background:var(--ok-tile-bg);color:var(--ok)}
 .tile.bad{border-color:var(--bad-border);background:var(--bad-tile-bg);animation:shake .35s}
 .tile.gone{opacity:0;pointer-events:none}
@@ -218,15 +220,45 @@ body{
 .board-actions{display:flex;justify-content:flex-end;margin-top:-4px}
 .go.small{padding:10px 14px;font-size:.94rem}
 
-/* 新手提示条：在棋盘和页脚之间占自己的位置，不压格子；有浮层（介绍页、词表、结算页）时贴到底部 */
-.tipbar{position:relative;z-index:7;align-self:center;max-width:100%;box-sizing:border-box;
+/* 新手提示条：放在顶栏「等价词速配」那一行的正中，比成就横幅低调；点一下就关（配对中不拦点击） */
+.tipbar{position:relative;max-width:100%;box-sizing:border-box;pointer-events:auto;
   background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--sel);
   border-radius:12px;padding:9px 14px;font-size:.88rem;line-height:1.45;text-align:center;cursor:pointer;
   box-shadow:0 8px 20px var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  opacity:0;transform:translateY(4px);transition:opacity .25s ease,transform .25s ease}
+  opacity:0;transform:translateY(-6px);transition:opacity .25s ease,transform .25s ease}
 .tipbar.show{opacity:1;transform:none}
-.app:has(.sheet:not([hidden])) .tipbar{position:absolute;left:18px;right:18px;bottom:20px;margin-inline:auto;width:fit-content;max-width:calc(100% - 36px)}
 @media (prefers-reduced-motion: reduce){.tipbar{transition:none;transform:none}}
+/* 成就解锁横幅：屏幕上半部分，深色底 + 金色描边，不挡点击 */
+:root{--ach-bg:#101826;--ach-bg2:#1c2a40;--ach-gold:#f2c14e;--ach-gold2:#ffe9a8;--ach-ink:#f5f1e6;--ach-sub:#b9c3d4}
+.top-stack{position:fixed;left:50%;top:max(12vh, calc(env(safe-area-inset-top,0px) + 64px));transform:translateX(-50%);z-index:60;pointer-events:none;
+  width:min(440px, calc(100vw - 32px));display:flex;flex-direction:column;align-items:center;gap:8px}
+.ach-toast{width:100%;pointer-events:none}
+.tip-dock{position:fixed;left:50%;top:max(20px, calc(env(safe-area-inset-top,0px) + 20px));transform:translate(-50%,-50%);z-index:61;pointer-events:none;
+  width:min(440px, calc(100vw - 32px));display:flex;justify-content:center}
+.tip-dock.placed{transform:translateY(-50%)}
+.tip-dock .tipbar{font-size:.8rem;line-height:1.35;padding:7px 12px}
+.tip-dock.in-game .tipbar{pointer-events:none;cursor:default}
+.ach-toast:empty{display:none}
+.ach-card{position:relative;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px;padding:12px 18px 12px 12px;overflow:hidden;
+  color:var(--ach-ink);background:linear-gradient(100deg,var(--ach-bg) 0%,var(--ach-bg2) 55%,var(--ach-bg) 100%);
+  border:1px solid color-mix(in srgb, var(--ach-gold) 55%, transparent);border-left:5px solid var(--ach-gold);border-radius:6px;
+  box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.35) inset;
+  animation:achIn .45s cubic-bezier(.2,.9,.25,1.15) both}
+.ach-card.out{animation:achOut .4s ease-in both}
+.ach-card::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,233,168,.28) 48%,transparent 66%);transform:translateX(-120%);animation:achShine 1.1s .35s ease-out both}
+.ach-emblem{--hex:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);position:relative;width:56px;height:52px;display:grid;place-items:center;font-size:1.6rem;line-height:1;
+  background:linear-gradient(160deg,var(--ach-gold2),var(--ach-gold) 45%,#b8862a);clip-path:var(--hex)}
+.ach-emblem::before{content:"";position:absolute;inset:2.5px;clip-path:var(--hex);background:radial-gradient(circle at 50% 35%,var(--ach-bg2),var(--ach-bg))}
+.ach-emblem>*{position:relative}
+.ach-emblem svg{width:44px;height:44px}
+.ach-text{display:grid;gap:2px;min-width:0}
+.ach-text small{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.22em;color:var(--ach-gold);text-transform:uppercase}
+.ach-text b{font-family:var(--f-display);font-size:1.18rem;line-height:1.15;letter-spacing:-.01em;color:var(--ach-gold2)}
+.ach-text span{font-size:.8rem;color:var(--ach-sub);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+@keyframes achIn{0%{opacity:0;transform:translateY(-18px) scaleX(.55)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes achOut{to{opacity:0;transform:translateY(-14px)}}
+@keyframes achShine{to{transform:translateX(120%)}}
+@media (prefers-reduced-motion: reduce){.ach-card,.ach-card.out{animation:none}.ach-card.out{opacity:0}.ach-card::after{display:none}}
 .tips-reset{display:flex;gap:10px;align-items:baseline;justify-content:center;flex-wrap:wrap;margin-top:4px}
 .tips-reset button{appearance:none;border:0;background:transparent;padding:4px 2px;font:inherit;font-size:.78rem;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .tips-reset button:hover,.tips-reset button:focus-visible{color:var(--sel)}
@@ -279,6 +311,7 @@ body{
 .lv .n{font-family:var(--f-mono);font-weight:700;font-size:.8rem;color:var(--sel);background:var(--lv-n-bg);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4)}
 .lv .t{font-family:var(--f-display);font-weight:800;font-size:1.25rem;line-height:1.1;letter-spacing:-.04em}
 .lv .s{display:block;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.lv .s .hint{font-family:var(--f-body);color:var(--sel);opacity:.85}
 .lv .bar{width:72px;height:7px;border-radius:999px;background:var(--bar-bg);overflow:hidden;display:flex}
 .lv .bar i{display:block;height:100%;flex:none}
 .lv .bar i.w{background:var(--bad)}
@@ -411,9 +444,12 @@ body{
     <div class="col" id="colL"></div>
     <div class="col" id="colR"></div>
   </div>
-  <div class="tipbar" id="tipbar" role="status" aria-live="polite" hidden></div>
   <div class="foot"><span class="lvname" id="lvname"></span> · 右键（手机长按）看英文释义</div>
   <div class="pop" id="pop" role="tooltip" hidden></div>
+  <div class="top-stack" id="topStack">
+    <div class="ach-toast" id="achToast" role="status" aria-live="polite"></div>
+  </div>
+  <div class="tip-dock" id="tipDock"><div class="tipbar" id="tipbar" role="status" aria-live="polite" hidden></div></div>
   <div class="resume" id="resume" hidden>
     <div class="resume-card" role="dialog" aria-modal="true" aria-labelledby="resumeTitle" aria-describedby="resumeInfo">
       <h3 id="resumeTitle">上次配对游戏尚未结束</h3>
@@ -885,10 +921,74 @@ const ACHIEVEMENTS = [
   { id: 'fav10', g: '其他', ico: '⭐', name: '收藏家',   desc: '收藏 10 对词',                     goal: 10, cur: c => c.fav }
 ];
 const achCtx = () => ({ ...getStats(), groups: groupsDone(), fav: getFavoriteKeys().size });
-function checkAchievements() {
+/* 顶部提示区（成就横幅 + 新手提示共用）：配对中放在倒计时 / 进度条下面，不挡计时；其他时候放在屏幕上部 */
+/* 新手提示的位置：
+   配对中 → 和「退出」按钮同一高度，放在它左边的空位（不挡倒计时、进度条和格子）；
+            如果成就横幅正好盖住这一行，就挪到横幅下面
+   其他页面（没有「退出」）→ 和顶栏「等价词速配」同一高度，放在主题开关左边 */
+function placeTipDock() {
+  const dock = $('tipDock'), exitBtn = $('exitRoundBtn');
+  const inGame = !!(S && S.running) && exitBtn && !exitBtn.hidden && exitBtn.getBoundingClientRect().height > 0;
+  dock.classList.toggle('in-game', inGame);
+  const setBox = (left, right, centerY) => {
+    dock.style.left = `${Math.round(left)}px`; dock.style.width = `${Math.round(right - left)}px`;
+    dock.style.top = `${Math.round(centerY)}px`; dock.classList.add('placed');
+  };
+  if (inGame) {
+    const er = exitBtn.getBoundingClientRect(), br = $('colL').getBoundingClientRect();
+    let cy = er.top + er.height / 2;
+    const card = $('achToast').firstElementChild;
+    if (card) {
+      const cr = card.getBoundingClientRect(), h = dock.offsetHeight || er.height;
+      if (cy + h / 2 > cr.top && cy - h / 2 < cr.bottom) cy = cr.bottom + 8 + h / 2;
+    }
+    setBox(br.left, er.left - 10, cy);
+    return;
+  }
+  const tb = document.querySelector('.topbar'), r = tb && tb.getBoundingClientRect();
+  const toggle = tb && tb.querySelector('.theme-toggle');
+  if (!r || !r.width || !toggle) { dock.style.left = dock.style.width = dock.style.top = ''; dock.classList.remove('placed'); return; }
+  const brand = tb.querySelector('.brand');
+  const bRight = brand && getComputedStyle(brand).visibility !== 'hidden' ? brand.getBoundingClientRect().right + 12 : r.left;
+  const right = toggle.getBoundingClientRect().left - 10;
+  setBox(right - bRight < 230 ? r.left : bRight, right, r.top + r.height / 2);
+}
+function placeTopStack() {
+  const st = document.querySelector('.status'), r = st && st.getBoundingClientRect();
+  const inGame = !!(S && S.running && r && r.height);
+  $('topStack').style.top = inGame ? `${Math.round(r.bottom + 8)}px` : '';
+
+}
+/* ---------- 成就 / 段位解锁横幅：一个接一个显示 ---------- */
+const achBanner = { queue: [], busy: false };
+const ACH_SHOW_MS = 3200, ACH_OUT_MS = 400, ACH_GAP_MS = 250;
+function announce(item) { achBanner.queue.push(item); if (!achBanner.busy) nextBanner(); }
+function announceAchievement(a) { announce({ label: '成就解锁', icon: a.ico, name: a.name, desc: a.desc }); }
+function announceRank(i) { announce({ label: '段位提升', svg: badgeSVG(i, 46), name: RANKS[i].name, desc: `已配对 ${learnedCount()}/${TOTAL_PAIRS} 对不同词对` }); }
+function nextBanner() {
+  const box = $('achToast'), item = achBanner.queue.shift();
+  if (!item) { achBanner.busy = false; return; }
+  achBanner.busy = true;
+  const card = document.createElement('div');
+  card.className = 'ach-card';
+  const emblem = document.createElement('div'); emblem.className = 'ach-emblem';
+  if (item.svg) emblem.innerHTML = item.svg; else { const ic = document.createElement('span'); ic.textContent = item.icon; emblem.appendChild(ic); }
+  const text = document.createElement('div'); text.className = 'ach-text';
+  [['small', item.label], ['b', item.name], ['span', item.desc]].forEach(([tag, t]) => { const el = document.createElement(tag); el.textContent = t; text.appendChild(el); });
+  card.append(emblem, text);
+  placeTopStack();
+  box.replaceChildren(card);
+  if (!$('tipbar').hidden) placeTipDock();
+  setTimeout(() => {
+    card.classList.add('out');
+    setTimeout(() => { card.remove(); setTimeout(nextBanner, ACH_GAP_MS); }, ACH_OUT_MS);
+  }, ACH_SHOW_MS);
+}
+function checkAchievements(silent = false) {
   const s = getStats(), c = achCtx(), got = [];
   ACHIEVEMENTS.forEach(a => { if (!s.ach[a.id] && a.cur(c) >= a.goal) { s.ach[a.id] = Date.now(); got.push(a); } });
   if (got.length) { s.fresh = true; saveStats(); }
+  if (!silent) got.forEach(announceAchievement);
   return got;
 }
 function renderBadges() {
@@ -986,6 +1086,7 @@ function showNextTip() {
   if (next.id) markTipSeen(next.id);   // 显示出来才算看过（通知不记）
   bar.textContent = next.msg;
   bar.hidden = false;
+  placeTipDock();
   void bar.offsetWidth;
   bar.classList.add('show');
   tipState.timer = setTimeout(dismissTip, tipDuration(next.msg));
@@ -1028,7 +1129,7 @@ function renderLevels() {
     const lv = LEVELS[realIndex];
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'lv'; b.id = `lv-${realIndex}`;
-    b.innerHTML = `<span><span class="t">${META[realIndex].name}</span><span class="s">${lv.length} 对</span></span>${statusBar(lv)}`;
+    b.innerHTML = `<span><span class="t">${META[realIndex].name}</span><span class="s">${lv.length} 对 · <span class="hint">${isMobile() ? '长按' : '右键'}背单词</span></span></span>${statusBar(lv)}`;
     b.addEventListener('click', () => { if (lvSuppress) { lvSuppress = false; return; } hideMenu(); start(realIndex); });
     b.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(realIndex, e.clientX, e.clientY); });
     b.addEventListener('pointerdown', e => {
@@ -1046,7 +1147,7 @@ function renderLevels() {
     const c = CUSTOM[key], pairs = c.pairs();
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'lv'; btn.id = `lv-${key}`;
-    btn.innerHTML = `<span><span class="t">${c.name}</span><span class="s">${pairs.length} 对</span></span>${statusBar(pairs.map(x => ({ w: x.a, p: x.b })))}`;
+    btn.innerHTML = `<span><span class="t">${c.name}</span><span class="s">${pairs.length} 对 · <span class="hint">${isMobile() ? '长按' : '右键'}背单词</span></span></span>${statusBar(pairs.map(x => ({ w: x.a, p: x.b })))}`;
     btn.addEventListener('click', () => {
       if (lvSuppress) { lvSuppress = false; return; }
       hideMenu();
@@ -1554,7 +1655,7 @@ function correct(l, r) {
   const rankUp = addCorrect(S.combo, wasHalf, peeked ? null : pairKey(pair.w, pair.p));   // 查过释义的这次不算掌握
   const gotAch = checkAchievements();
   if (gotAch.length) (S.achNew ??= []).push(...gotAch);
-  if (rankUp >= 0) (S.rankUps ??= []).push(rankUp);
+  if (rankUp >= 0) { (S.rankUps ??= []).push(rankUp); announceRank(rankUp); }
   let bonus = S.combo >= 3 && !S.unlimited ? 1000 : 0;
   if (S.combo === 3 && !S.unlimited) tip('first-combo');
   if (!S.unlimited) STOPS.filter(n => n < S.target).forEach(n => {
@@ -1653,7 +1754,7 @@ function finish(won) {
     return `<div class="row ${cls}" data-w="${P.w}" data-p="${P.p}"><button type="button" class="star${fav ? ' on' : ''}" aria-label="${fav ? '移出收藏夹' : '加入收藏夹'}" aria-pressed="${fav}">${fav ? '★' : '☆'}</button><span><b>${P.w}</b> = <b>${P.p}</b></span><em>${P.zh}</em></div>`;
   };
   $('missed').innerHTML =
-    (missedIds.length ? '<div class="eyebrow">配错过的词 · 下局会更早出现</div>' + missedIds.map(id => endRow(id, 'wrong')).join('') : '') +
+    (missedIds.length ? '<div class="eyebrow">配错过的词 · 下局会更早出现 · <button type="button" class="linkbtn" id="endStudy">点击此处背单词</button></div>' + missedIds.map(id => endRow(id, 'wrong')).join('') : '') +
     (okIds.length ? '<div class="eyebrow">配对成功的词</div>' + okIds.map(id => endRow(id, 'correct')).join('') : '');
   $('missed').querySelectorAll('.row').forEach(row => {
     const star = row.querySelector('.star');
@@ -1662,6 +1763,13 @@ function finish(won) {
       star.classList.toggle('on', on); star.textContent = on ? '★' : '☆';
       star.setAttribute('aria-pressed', on); star.setAttribute('aria-label', on ? '移出收藏夹' : '加入收藏夹');
     });
+  });
+  const studyLink = $('endStudy');
+  if (studyLink) studyLink.addEventListener('click', () => {
+    const level = S.level;
+    track('study-open');
+    $('end').hidden = true; $('exitRoundBtn').hidden = true;
+    if (isCustom(level)) openCustomStudy(level); else openStudy(level);
   });
   $('end').hidden = false;
   $('againBtn').focus({ preventScroll: true });
@@ -1672,7 +1780,7 @@ $('againBtn').addEventListener('click', () => {
   else if (S) start(S.level);
 });
 $('menuBtn').addEventListener('click', () => { $('end').hidden = true; $('exitRoundBtn').hidden = true; renderLevels(); $('start').hidden = false; });
-checkAchievements();   // 已有的绿色进度、收藏数立刻换算成成就
+checkAchievements(true);   // 已有的绿色进度、收藏数立刻换算成成就（静默，不弹横幅）
 renderLevels();
 
 /* 重置：清掉所有 gre-eq- 开头的存档（含主题）。页内两步确认，因为 confirm() 在某些环境里会被屏蔽 */
