@@ -1,11 +1,10 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>等价词速配</title>
-<style>[hidden]{display:none!important}body{margin:0}</style>
+<style>[hidden]:not([hidden=until-found i]){display:none!important}img{max-width:100%}</style>
 
 <meta name="claude:viewport-fit-sides" content="cover">
 <script>try{var t=localStorage.getItem("gre-eq-theme-v1");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
@@ -14,6 +13,7 @@
 <style>
 /* Layout: one-screen game — status strip (timer · progress with reward stops) above two equal columns of word tiles. Study-desk ink blue with a highlighter accent. */
 :root{
+  color-scheme:light;
   --paper:#dce9f7;
   --paper-strong:#c3d9f2;
   --panel:rgba(240,246,255,0.86);
@@ -154,6 +154,8 @@ body{
   letter-spacing:0.01em;
   padding-left:max(16px, env(safe-area-inset-left, 0px));
   padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box}
 .app{
@@ -647,12 +649,15 @@ ALL_PAIRS.forEach((pair, order) => {
 const GROUP_ORDER = Array.from({ length: LEVELS.length }, (_, i) => i);
 const FAV_KEY = 'gre-eq-fav-pairs-v1';
 const PAIR_STATE_KEY = 'gre-eq-pair-state-v1';
-try { localStorage.removeItem('gre-eq-word-state-v3'); } catch {}
+try { localStorage.removeItem('gre-eq-word-state-v3'); for (let i = 0; i < 10; i++) localStorage.removeItem(`gre-eq-miss-v4-${i}`); } catch {}   // 旧版的跨局错词队列：已改由配对颜色决定出词顺序
 const FAVORITE_NAME = '收藏夹';
 
 const ADJ = {};
 const link = (a, b) => { (ADJ[a] ??= new Set()).add(b); (ADJ[b] ??= new Set()).add(a); };
 LEVELS.flat().forEach(P => link(P.w, P.p));
+/* 同屏唯一答案：和某个词「直接等价」或「经过一个中间词等价」的词都算同一簇，不能同时上屏 */
+const NEAR = {};
+Object.keys(ADJ).forEach(w => { const s = new Set([w]); ADJ[w].forEach(a => { s.add(a); ADJ[a].forEach(b => s.add(b)); }); NEAR[w] = s; });
 
 const BONUS_MS = 8000, PENALTY_MS = 3000;
 /* 一局的时间 / 目标对数：介绍页「可调整」里改，存在本浏览器 */
@@ -681,7 +686,6 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-const missKey = n => `gre-eq-miss-v4-${n}`;
 
 let S = null, pressTimer = null, suppressClick = false;
 
@@ -782,6 +786,12 @@ function flushPairSave() {
 }
 function schedulePairSave() { if (pairSaveTimer === null) pairSaveTimer = setTimeout(flushPairSave, 300); }
 addEventListener('pagehide', () => { if (pairSaveTimer !== null) flushPairSave(); });
+/* 手机浏览器常在切后台后直接杀标签页而不触发 pagehide：切到后台时就先落盘 */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  if (pairSaveTimer !== null) flushPairSave();
+  saveRound();
+});
 
 /* ---------- 段位徽章：按累计配对正确数升级 ---------- */
 const STATS_KEY = 'gre-eq-stats-v1';
@@ -1008,6 +1018,7 @@ function renderLevels() {
     b.addEventListener('click', () => { if (lvSuppress) { lvSuppress = false; return; } hideMenu(); start(realIndex); });
     b.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(realIndex, e.clientX, e.clientY); });
     b.addEventListener('pointerdown', e => {
+      lvSuppress = false;
       if (e.pointerType === 'mouse') return;
       clearTimeout(lvTimer);
       lvTimer = setTimeout(() => { lvSuppress = true; showMenu(realIndex, e.clientX, e.clientY); }, 450);
@@ -1029,6 +1040,7 @@ function renderLevels() {
     });
     btn.addEventListener('contextmenu', e => { e.preventDefault(); showMenu(key, e.clientX, e.clientY); });
     btn.addEventListener('pointerdown', e => {
+      lvSuppress = false;
       if (e.pointerType === 'mouse') return;
       clearTimeout(lvTimer);
       lvTimer = setTimeout(() => { lvSuppress = true; showMenu(key, e.clientX, e.clientY); }, 450);
@@ -1073,6 +1085,7 @@ function bindRows() {
       toggle();
     });
     row.addEventListener('pointerdown', e => {
+      longPressed = false;
       if (e.pointerType === 'mouse') return;
       clearTimeout(t);
       t = setTimeout(() => { longPressed = true; toggle(); }, 450);
@@ -1139,6 +1152,7 @@ for (let i = 0; i < SLOTS; i++) {
     b.addEventListener('click', () => { if (suppressClick) { suppressClick = false; return; } hidePop(); tap(side, i); });
     b.addEventListener('contextmenu', e => { e.preventDefault(); showDef(side, i, b); });
     b.addEventListener('pointerdown', e => {
+      suppressClick = false;   // 新一次按下：上一次长按没等到 click 也不能吞掉这次
       if (e.pointerType === 'mouse') return;
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => { suppressClick = true; showDef(side, i, b); }, 450);
@@ -1262,8 +1276,8 @@ function boardWords() {
 function fits(id, vis, active) {
   if (active.has(id)) return false;
   const P = S.pool[id];
-  if (vis.has(P.w) || vis.has(P.p)) return false;
-  for (const v of vis) if (ADJ[P.w].has(v) || ADJ[P.p].has(v)) return false;
+  const nw = NEAR[P.w], np = NEAR[P.p];
+  for (const v of vis) if (nw.has(v) || np.has(v)) return false;
   return true;
 }
 function pickNext() {
@@ -1425,6 +1439,7 @@ function startCustomNew(key) {
 }
 
 function exitRound() {
+  if (S && S.winTimer) { clearTimeout(S.winTimer); S.winTimer = null; S.running = true; finish(true); }   // 最后一对已配完、结算还在等动画：退出前先把通关记下来
   if (S && S.running) { track('round-exit'); saveRound(); }
   if (S && S.timer) clearInterval(S.timer);
   S = null; hidePop(); clearTipQueue();
@@ -1439,7 +1454,7 @@ function startNew(level) {
   if (S && S.timer) clearInterval(S.timer);
   const pool = LEVELS[level];
   const bag = orderBag(pool);
-  const queue = store.get(missKey(level), []).filter(id => pool[id]).map((id, k) => ({ id, due: Math.floor(k / 2) }));
+  const queue = [];
   S = {
     level, pool, bag, queue,
     L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
@@ -1513,6 +1528,7 @@ function flash(text, color) {
 }
 
 function correct(l, r) {
+  const R = S;   // 延时回调只认这一局：中途退出 / 换局后就什么都不做
   const pair = S.pool[S.L[l]];
   S.matches++; S.combo++;
   S.matchedIds.add(S.L[l]);
@@ -1546,11 +1562,11 @@ function correct(l, r) {
   if (progress() >= S.target) {
     S.running = false; clearInterval(S.timer);
     document.querySelector(`.stop[data-n="${S.target}"]`).classList.add('hit');
-    setTimeout(() => { S.running = true; finish(true); }, 450);
+    R.winTimer = setTimeout(() => { if (S !== R) return; R.winTimer = null; R.running = true; finish(true); }, 450);
     return;
   }
   setTimeout(() => {
-    if (!S.running) return;
+    if (S !== R || !R.running) return;
     S.L[l] = null; S.R[r] = null;
     S.lock.delete(kl); S.lock.delete(kr);
     S.emptyL.push(l); S.emptyR.push(r);
@@ -1576,6 +1592,7 @@ function refill() {
 }
 
 function wrong(l, r) {
+  const R = S;
   const left = S.pool[S.L[l]], right = S.pool[S.R[r]];
   S.combo = 0; S.errors++;
   markPair(left, 'wrong'); markPair(right, 'wrong');
@@ -1592,7 +1609,7 @@ function wrong(l, r) {
   S.lock.add(kl); S.lock.add(kr);
   tilesL[l].className = 'tile bad'; tilesR[r].className = 'tile bad';
   $('caption').textContent = '这两个不是一对';
-  setTimeout(() => { S.lock.delete(kl); S.lock.delete(kr); if (S.running) render(); }, 420);
+  setTimeout(() => { R.lock.delete(kl); R.lock.delete(kr); if (S === R && R.running) render(); }, 420);
   renderClock();
 }
 
@@ -1606,8 +1623,6 @@ function finish(won) {
   const gotEnd = checkAchievements();
   const achNames = [...(S.achNew || []), ...gotEnd].map(a => a.ico + a.name);
   const missedIds = [...S.missed.keys()];
-  const prev = store.get(missKey(S.level), []);
-  store.set(missKey(S.level), [...new Set(missedIds.concat(prev))].slice(0, 40));
   $('endEyebrow').textContent = S.favoriteMode ? `${CUSTOM[S.level].name} · ${won ? '走完全程' : '时间到'}` : `${META[S.level].name} · ${won ? '走完全程' : '时间到'}`;
   $('endTitle').textContent = won ? '通关' : `配了 ${progress()} 对`;
   $('stats').innerHTML =
@@ -1698,4 +1713,3 @@ renderLevels();
 
 </body>
 </html>
-</body></html>
