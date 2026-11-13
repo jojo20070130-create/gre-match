@@ -793,17 +793,21 @@ document.addEventListener('visibilitychange', () => {
   saveRound();
 });
 
-/* ---------- 段位徽章：按累计配对正确数升级 ---------- */
+/* ---------- 段位徽章：按「配对成功过的不同词对」数量升级；同一对配多少次都只算一次 ---------- */
 const STATS_KEY = 'gre-eq-stats-v1';
+const ALL_PAIR_KEYS = new Set(GRE_SYNONYMS.map(x => pairKey(x.a, x.b)));
+const TOTAL_PAIRS = ALL_PAIR_KEYS.size;
 const RANKS = [
   { name: '等价词菜鸟', min: 0 },
-  { name: '等价词新手', min: 15 },
-  { name: '等价词学徒', min: 50 },
-  { name: '等价词大师', min: 150 },
-  { name: '等价词长老', min: 400 },
-  { name: '等价词国王', min: 800 }
+  { name: '等价词新手', min: 20 },
+  { name: '等价词学徒', min: 60 },
+  { name: '等价词达人', min: 120 },
+  { name: '等价词专家', min: 200 },
+  { name: '等价词大师', min: 320 },
+  { name: '等价词长老', min: 500 },
+  { name: '等价词国王', min: TOTAL_PAIRS }   // 国王 = 词库里每一对都配对成功过
 ];
-/* 六个迷你角色（内联 SVG，固定配色，深浅色主题下都清楚）：蛋壳小鸡 → 嫩芽 → 捧书学徒 → 学士帽 → 白胡子长老 → 小国王 */
+/* 八个迷你角色（内联 SVG，固定配色，深浅色主题下都清楚）：蛋壳小鸡 → 嫩芽 → 捧书学徒 → 墨镜达人 → 眼镜专家 → 学士帽 → 白胡子长老 → 小国王 */
 const OL = '#23406e';
 const faceSVG = (dy = 0, mouth = true) => `<g transform="translate(0 ${dy})"><circle cx="25" cy="38" r="2.7" fill="${OL}"/><circle cx="39" cy="38" r="2.7" fill="${OL}"/><circle cx="26" cy="37" r=".9" fill="#fff"/><circle cx="40" cy="37" r=".9" fill="#fff"/><ellipse cx="19" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/><ellipse cx="45" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/>${mouth ? `<path d="M28.5 43q3.5 3.5 7 0" stroke="${OL}" stroke-width="1.8" fill="none" stroke-linecap="round"/>` : ''}</g>`;
 const BODY = (fill, cy = 38) => `<circle cx="32" cy="${cy}" r="20" fill="${fill}" stroke="${OL}" stroke-width="2"/>`;
@@ -814,6 +818,10 @@ const CHARS = [
   `<path d="M32 18v-7" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/><path d="M32 12q-2-9-12-8 1 9 12 8zM32 12q2-9 12-8-1 9-12 8z" fill="#5fd18b" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/>${BODY('#a8ecc0')}${faceSVG()}`,
   /* 学徒：红头带 + 捧着一本书 */
   `${BODY('#9cc8ff')}<path d="M13 28q19-9 38 0v6q-19-8-38 0z" fill="#ff6b7d" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/><path d="M50 31l8-4-2 9z" fill="#ff6b7d" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/>${faceSVG(2)}<rect x="19" y="50" width="26" height="12" rx="2.5" fill="#ffab6b" stroke="${OL}" stroke-width="2"/><path d="M32 50v12" stroke="${OL}" stroke-width="1.8"/><circle cx="17" cy="54" r="3.5" fill="#9cc8ff" stroke="${OL}" stroke-width="1.8"/><circle cx="47" cy="54" r="3.5" fill="#9cc8ff" stroke="${OL}" stroke-width="1.8"/>`,
+  /* 达人：墨镜 + 头顶小星星 */
+  `${BODY('#ffc48a')}<path d="M32 9l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" fill="#ffe27a" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/><ellipse cx="19" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/><ellipse cx="45" cy="43" rx="3.2" ry="2" fill="#ff8fa3" opacity=".65"/><path d="M15 33h34" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/><path d="M17 33h12v3q0 5-6 5t-6-5z" fill="${OL}"/><path d="M35 33h12v3q0 5-6 5t-6-5z" fill="${OL}"/><path d="M19.5 35l3-1.5M37.5 35l3-1.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".8"/><path d="M27 45q5 4 10 0" stroke="${OL}" stroke-width="1.9" fill="none" stroke-linecap="round"/>`,
+  /* 专家：圆框眼镜 + 放大镜 */
+  `${BODY('#b8e6e0')}${faceSVG()}<circle cx="25" cy="38" r="6.2" fill="none" stroke="${OL}" stroke-width="2"/><circle cx="39" cy="38" r="6.2" fill="none" stroke="${OL}" stroke-width="2"/><path d="M31.2 38h1.6M18.8 37l-5-2M45.2 37l5-2" stroke="${OL}" stroke-width="2" stroke-linecap="round"/><path d="M14 26q6-9 18-9t18 9q-9-4-18-4t-18 4z" fill="#7a8fa8" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/><path d="M52 56l7 6" stroke="#a0662f" stroke-width="3.2" stroke-linecap="round"/><circle cx="48" cy="52" r="6" fill="#dff3ff" stroke="${OL}" stroke-width="2"/><path d="M45.5 50.5q1.5-2 4-1.6" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
   /* 大师：学士帽 + 金色流苏 */
   `${BODY('#cdbcff', 40)}${faceSVG(2)}<path d="M20 25v8q12 7 24 0v-8z" fill="#34548a" stroke="${OL}" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 20l26-11 26 11-26 11z" fill="#3d63a3" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M54 21v13" stroke="#ffc21a" stroke-width="2.2" stroke-linecap="round"/><circle cx="54" cy="36" r="3" fill="#ffc21a" stroke="${OL}" stroke-width="1.5"/>`,
   /* 长老：白眉毛、白鬓角、长白胡子 */
@@ -827,27 +835,33 @@ function getStats() {
     let s = {};
     try { s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}') || {}; } catch {}
     const num = v => Math.max(0, Number(v) || 0);
+    /* learned：配对成功过的不同词对（只增不减，之后配错也不会掉段位）。旧数据没有这项时，用现在是绿色的词对补上 */
+    const learned = Array.isArray(s.learned)
+      ? s.learned.filter(k => ALL_PAIR_KEYS.has(k))
+      : Object.entries(loadPairState()).filter(([k, v]) => v === 'correct' && ALL_PAIR_KEYS.has(k)).map(([k]) => k);
     STATS = { correct: num(s.correct), bestCombo: num(s.bestCombo), wins: num(s.wins), perfect: num(s.perfect), recovered: num(s.recovered),
-      ach: s.ach && typeof s.ach === 'object' ? s.ach : {}, fresh: !!s.fresh };
+      learned: new Set(learned), ach: s.ach && typeof s.ach === 'object' ? s.ach : {}, fresh: !!s.fresh };
   }
   return STATS;
 }
-function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(getStats())); } catch {} }
+function saveStats() { try { const st = getStats(); localStorage.setItem(STATS_KEY, JSON.stringify({ ...st, learned: [...st.learned] })); } catch {} }
+const learnedCount = () => getStats().learned.size;
 function rankIndex(n) { let r = 0; RANKS.forEach((x, i) => { if (n >= x.min) r = i; }); return r; }
-function addCorrect(combo = 0, wasHalf = false) {
-  const s = getStats(), before = rankIndex(s.correct);
-  s.correct++;
+function addCorrect(combo = 0, wasHalf = false, key = null) {
+  const s = getStats(), before = rankIndex(s.learned.size);
+  s.correct++;                                   // 总配对次数（只做统计，不影响段位）
+  if (key && ALL_PAIR_KEYS.has(key)) s.learned.add(key);
   if (combo > s.bestCombo) s.bestCombo = combo;
   if (wasHalf) s.recovered++;   // 黄 → 绿：错过的词真的补回来了
   saveStats();
-  const after = rankIndex(s.correct);
+  const after = rankIndex(s.learned.size);
   return after > before ? after : -1;   // 升级了就返回新段位序号
 }
 function renderRank(up) {
-  const n = getStats().correct, i = rankIndex(n), cur = RANKS[i], nx = RANKS[i + 1];
+  const n = learnedCount(), i = rankIndex(n), cur = RANKS[i], nx = RANKS[i + 1];
   const el = $('rank');
   el.innerHTML = `<span class="ico">${badgeSVG(i, 60)}${getStats().fresh ? '<span class="dot" aria-label="有新成就"></span>' : ''}</span><span class="nm"><span>${cur.name}</span><span class="arrow" aria-hidden="true">›</span></span>` +
-    `<span class="sub">${nx ? `累计配对 ${n} · 距「${nx.name}」还差 ${nx.min - n}` : `累计配对 ${n} · 已是最高段位`}</span>` +
+    `<span class="sub">${nx ? `已配对 ${n}/${TOTAL_PAIRS} 对 · 距「${nx.name}」还差 ${nx.min - n}` : `全部 ${TOTAL_PAIRS} 对都配对过 · 已是最高段位`}</span>` +
     `<span class="meter"><i style="width:${nx ? ((n - cur.min) / (nx.min - cur.min) * 100).toFixed(1) : 100}%"></i></span>`;
   el.classList.remove('up'); if (up) { void el.offsetWidth; el.classList.add('up'); }
 }
@@ -878,8 +892,8 @@ function checkAchievements() {
   return got;
 }
 function renderBadges() {
-  const s = getStats(), c = achCtx(), ri = rankIndex(s.correct);
-  const badges = RANKS.map((r, i) => `<div class="bd${i <= ri ? '' : ' locked'}${i === ri ? ' cur' : ''}">${badgeSVG(i, 64)}<b>${r.name}</b><span>${i <= ri ? (i === ri ? '当前段位' : '已获得') : `累计配对 ${r.min} 对解锁`}</span></div>`).join('');
+  const s = getStats(), c = achCtx(), ri = rankIndex(s.learned.size);
+  const badges = RANKS.map((r, i) => `<div class="bd${i <= ri ? '' : ' locked'}${i === ri ? ' cur' : ''}">${badgeSVG(i, 64)}<b>${r.name}</b><span>${i <= ri ? (i === ri ? '当前段位' : '已获得') : (r.min >= TOTAL_PAIRS ? `全部 ${TOTAL_PAIRS} 对都配对过解锁` : `配对过 ${r.min} 对不同词对解锁`)}</span></div>`).join('');
   let last = '';
   const rows = ACHIEVEMENTS.map(a => {
     const done = !!s.ach[a.id], v = Math.min(a.cur(c), a.goal);
@@ -1537,7 +1551,7 @@ function correct(l, r) {
   if (S.peek) { S.peek.delete(pair.w); S.peek.delete(pair.p); }
   const wasHalf = !peeked && getPairStatus(pair) === 'half';
   if (!peeked) markPair(pair, 'correct');
-  const rankUp = addCorrect(S.combo, wasHalf);
+  const rankUp = addCorrect(S.combo, wasHalf, peeked ? null : pairKey(pair.w, pair.p));   // 查过释义的这次不算掌握
   const gotAch = checkAchievements();
   if (gotAch.length) (S.achNew ??= []).push(...gotAch);
   if (rankUp >= 0) (S.rankUps ??= []).push(rankUp);
@@ -1629,8 +1643,8 @@ function finish(won) {
     `<div><span>配对</span><b>${progress()}/${S.target}</b></div>` +
     `<div><span>配错</span><b>${S.errors}</b></div>` +
     (S.unlimited ? `<div><span>用时</span><b>${Math.round(S.elapsed / 1000)} 秒</b></div>` : '');
-  const ri = rankIndex(getStats().correct);
-  $('endRank').innerHTML = `${badgeSVG(ri, 36)}<span>${RANKS[ri].name} · 累计配对 ${getStats().correct}` +
+  const ri = rankIndex(learnedCount());
+  $('endRank').innerHTML = `${badgeSVG(ri, 36)}<span>${RANKS[ri].name} · 已配对 ${learnedCount()}/${TOTAL_PAIRS} 对不同词对` +
     (S.rankUps && S.rankUps.length ? ` · 本局升级为 ${RANKS[S.rankUps[S.rankUps.length - 1]].name}！` : '') +
     (achNames.length ? ` · 成就达成：${achNames.join('、')}` : '') + '</span>';
   const okIds = [...(S.matchedIds || [])].filter(id => !S.missed.has(id));
