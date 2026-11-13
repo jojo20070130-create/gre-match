@@ -9,7 +9,8 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <script>try{var t=localStorage.getItem("gre-eq-theme-v1");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;700;800&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;700;800&display=swap"></noscript>
 <style>
 /* Layout: one-screen game — status strip (timer · progress with reward stops) above two equal columns of word tiles. Study-desk ink blue with a highlighter accent. */
 :root{
@@ -346,6 +347,7 @@ body{
 #study{justify-content:flex-start}
 #help{justify-content:flex-start}
 #settings{align-items:center;text-align:center}
+#settingsTitle:focus{outline:none}
 .settings-body{display:grid;gap:14px;justify-items:center}
 .settings-body label{display:flex;gap:12px;align-items:center;font-weight:700;color:var(--ink)}
 .settings-body label span{color:var(--sel);min-width:3em;text-align:right}
@@ -465,7 +467,7 @@ body{
     <div class="eyebrow">GRE 六选二 · 等价词</div>
     <h1>等价词<mark>速配</mark></h1>
     <ol class="rules">
-      <li class="rule-grid"><b>配对</b><span>点左边一个词，再点右边同义的词。</span><b>规则</b><span><span class="set-goal">75 秒配满 20 对通关</span>（<button type="button" class="linkbtn" id="settingsOpen">点击调整</button>）。</span></li>
+      <li class="rule-grid"><b>配对</b><span>点一个词，再点另一列里同义的词。</span><b>规则</b><span><span class="set-goal">75 秒配满 20 对通关</span>（<button type="button" class="linkbtn" id="settingsOpen">点击调整</button>）。</span></li>
       <li><b>右键/长按</b><span>词组 → 背单词；配对时的单词 → 看英文释义。</span></li>
       <li><b>其他</b><span><button type="button" class="linkbtn" id="helpOpen">其他规则</button>第一次用到时会有提示。</span></li>
     </ol>
@@ -478,7 +480,7 @@ body{
 
   <section class="sheet" id="settings" hidden aria-labelledby="settingsTitle">
     <div class="eyebrow">等价词速配</div>
-    <h2 id="settingsTitle">设置</h2>
+    <h2 id="settingsTitle" tabindex="-1">设置</h2>
     <div class="settings-body">
       <label><span>时间</span><select id="setSec"></select></label>
       <label><span>目标</span><select id="setPairs"></select></label>
@@ -1332,7 +1334,7 @@ function saveSettings(next) {
     DRAFT = { ...SETTINGS }; sync();
     $('settingsAsk').hidden = true;
     $('start').hidden = true; $('settings').hidden = false;
-    $('setSec').focus({ preventScroll: true });
+    $('settingsTitle').focus({ preventScroll: true });   // 不直接聚焦「时间」下拉框，免得一进来就出现高亮框
   };
   ['setSec', 'setPairs', 'setPeek'].forEach(id => $(id).addEventListener('change', onChange));
   $('settingsReset').addEventListener('click', () => { saveSettings({ ...DEFAULT_SETTINGS }); closeSettings(); });   // 重置后一律回到开始界面
@@ -1354,7 +1356,7 @@ function showDef(side, i, el) {
   if (!S || !S.running) return;
   const id = side === 'L' ? S.L[i] : S.R[i];
   if (id === null) return;
-  const P = S.pool[id], word = side === 'L' ? P.w : P.p;
+  const P = S.pool[id], word = wordFor(side, id);
   const pop = $('pop');
   const entry = DEF[word] || {};
   const def = typeof entry === 'string' ? entry : (entry.def || '暂无释义');
@@ -1463,7 +1465,7 @@ function saveRound() {
   const data = {
     poolLen: S.pool.length,
     pool: S.favoriteMode ? S.pool.map(P => ({ w: P.w, p: P.p, zh: P.zh })) : undefined,
-    L, R, bag: S.bag, queue: S.queue,
+    L, R, flip: [...S.flip], bag: S.bag, queue: S.queue,
     matches: S.matches, combo: S.combo, errors: S.errors,
     timeLeft: S.timeLeft, elapsed: S.elapsed,
     target: S.target, unlimited: S.unlimited, allMode: S.allMode,
@@ -1482,7 +1484,7 @@ function resumeRound(level, v) {
     bag: (v.bag || []).filter(okId),
     queue: (v.queue || []).filter(q => q && okId(q.id)),
     L: v.L.slice(), R: v.R.slice(),
-    sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
+    sel: null, flip: new Set((v.flip || []).filter(okId)), lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
     matches: v.matches | 0, combo: v.combo | 0, errors: v.errors | 0,
     timeLeft: Math.max(1000, Number(v.timeLeft) || START_MS), elapsed: Number(v.elapsed) || 0,
     target: v.target, unlimited: !!v.unlimited, allMode: !!v.allMode,
@@ -1537,14 +1539,14 @@ function startCustomNew(key) {
   S = {
     level: key, pool, bag, queue,
     L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
-    sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
+    sel: null, flip: new Set(), lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
     matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
     missed: new Map(), stopsHit: new Set(), timer: null,
     favoriteMode: true
   };
   setupRound();
   const ids = [];
-  for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
+  for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; dealFlip(id); }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
   trackEmptySlots();
   clearRoundSave(key);
@@ -1573,13 +1575,13 @@ function startNew(level) {
   S = {
     level, pool, bag, queue,
     L: Array(SLOTS).fill(null), R: Array(SLOTS).fill(null),
-    sel: null, lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
+    sel: null, flip: new Set(), lock: new Set(), fresh: new Set(), emptyL: [], emptyR: [],
     matches: 0, combo: 0, errors: 0, timeLeft: START_MS, last: 0, running: false,
     missed: new Map(), stopsHit: new Set(), timer: null, favoriteMode: false
   };
   setupRound();
   const ids = [];
-  for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; }
+  for (let i = 0; i < SLOTS; i++) { const id = pickNext(); ids.push(id); S.L[i] = id; S.R[i] = id; dealFlip(id); }
   S.L = shuffle(ids.slice()); S.R = shuffle(ids.slice());
   trackEmptySlots();
   clearRoundSave(level);
@@ -1620,8 +1622,11 @@ function paint(el, id, side, i) {
   if (S.lock.has(key)) return;
   const isNew = S.fresh.delete(key);
   el.className = 'tile' + (id === null ? ' gone' : '') + (isNew ? ' new' : '') + (S.sel && S.sel.side === side && S.sel.i === i ? ' sel' : '');
-  el.textContent = id === null ? '' : (side === 'L' ? S.pool[id].w : S.pool[id].p);
+  el.textContent = id === null ? '' : wordFor(side, id);
 }
+/* 每次出词随机决定这一对谁在左、谁在右，避免「位置」变成线索 */
+function dealFlip(id) { if (Math.random() < 0.5) S.flip.add(id); else S.flip.delete(id); }
+function wordFor(side, id) { const P = S.pool[id]; return (side === 'L') !== S.flip.has(id) ? P.w : P.p; }
 
 function tap(side, i) {
   if (!S || !S.running) return;
@@ -1701,7 +1706,7 @@ function refill() {
   for (let k = 0; k < ls.length; k++) {
     const id = pickNext();
     if (id === null) { S.emptyL.push(ls[k]); S.emptyR.push(rs[k]); continue; }
-    S.L[ls[k]] = id; S.R[rs[k]] = id;
+    S.L[ls[k]] = id; S.R[rs[k]] = id; dealFlip(id);
     S.fresh.add('L' + ls[k]); S.fresh.add('R' + rs[k]);
   }
 }
